@@ -39,17 +39,16 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
-    is_einx_available,
+    # is_einx_available,
     logging,
     replace_return_docstrings,
 )
 from .configuration_doge import DogeConfig
 
 
-if is_einx_available():
-    from einx import add as einx_add
-else:
-    einx_add = None
+
+from einx import add as einx_add
+
 
 
 logger = logging.get_logger(__name__)
