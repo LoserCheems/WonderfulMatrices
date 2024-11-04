@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team.    All rights reserved.
+# Copyright 2024 Jingze Shi.    All rights reserved.
 #
 # This code is based on the Wonderful Matrices paper implementation.
 #
