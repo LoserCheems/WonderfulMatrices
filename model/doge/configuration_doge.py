@@ -141,9 +141,9 @@ class DogeConfig(PretrainedConfig):
         num_inner_values=2,
         cross_domain_intermediate_size=1024,
         private_expert_intermediate_size=256,
-        num_cdmmoe_experts=1024,
-        num_cdmmoe_heads=1,
-        num_cdmmoe_experts_per_head=2,
+        num_cdmmoe_experts=256,
+        num_cdmmoe_heads=2,
+        num_cdmmoe_experts_per_head=4,
         **kwargs,
     ):
         self.vocab_size = vocab_size
