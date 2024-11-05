@@ -17,7 +17,7 @@ English | [简体中文](./README_zh.md)
 
 This project is a continuation of the discussion section of the [Wonderful Matrices](https://arxiv.org/abs/2407.16958) paper.
 
-We hope to further explore whether the Transformer framework allows for deeper and more complex feedforward network structures by training a small language model (SLM) based on the `Doge` architecture, enabling the model to have fewer cache states and larger knowledge capacity.
+We hope to further explore whether the Transformer framework allows for more complex feedforward network structures by training a small language model (SLM) based on the `Doge` architecture, enabling the model to have fewer cache states and larger knowledge capacity.
 
 We also hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use them.
 
