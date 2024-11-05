@@ -11,31 +11,45 @@ model:
   pad_token_id: 0
   bos_token_id: 1
   eos_token_id: 2
-  num_attention_heads: 4
+  num_attention_heads: 2
   num_inner_values: 2
   cross_domain_intermediate_size: 1024
   private_expert_intermediate_size: 256
   num_cdmmoe_experts: 256
-  num_cdmmoe_heads: 2
-  num_cdmmoe_experts_per_head: 4
+  num_cdmmoe_heads: 1
+  num_cdmmoe_experts_per_head: 2
 
 train:
+  dataset_path: "./datasets/pretrain_dataset"
+  logging_steps: 400
+  num_train_epochs: 2
+  per_epoch_max_steps: 4000
+  eval_steps: 400
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  weight_decay: 0.01
+  learning_rate: 0.0008
+  warmup_ratio: 0.1
+  min_lr_rate: 0.1
+  save_safetensors: True
+  save_steps: 400
+  bf16: True
+  max_grad_norm: 1.0
+  gradient_accumulation_steps: 128
+
+finetune:
+  dataset_path: "./datasets/finetune_dataset"
   logging_steps: 100
-  do_train: True
-  max_steps: 2000
-  do_eval: True
-  eval_strategy: "steps"
+  per_epoch_max_steps: 400
   eval_steps: 100
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
   weight_decay: 0.01
   learning_rate: 0.0008
   warmup_ratio: 0.1
-  lr_scheduler_type: "cosine_with_min_lr"
   min_lr_rate: 0.1
   save_safetensors: True
-  save_strategy: "steps"
   save_steps: 100
-  bf16: False
+  bf16: True
   max_grad_norm: 1.0
-  gradient_accumulation_steps: 256
+  gradient_accumulation_steps: 4
