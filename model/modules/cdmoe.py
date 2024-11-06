@@ -120,6 +120,6 @@ class CDMoE(nn.Module):
 
         # efficient retrieval of private experts
         hidden_states = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
-        hidden_states = self.act_fn(hidden_states) * scores.softmax(dim=-1)
+        hidden_states = self.act_fn(hidden_states * scores.softmax(dim=-1))
         hidden_states = torch.einsum("b t h k, b t h k d -> b t d", hidden_states, up_embed)
         return hidden_states

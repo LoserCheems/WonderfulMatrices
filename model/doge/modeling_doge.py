@@ -363,13 +363,13 @@ class DogeInnerFuncAttn(nn.Module):
         key_states = self.k_proj(hidden_states)
         value_states = self.inner_func(hidden_states)
 
-        query_states = query_states.reshape(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        query_states = query_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
-        key_states = key_states.reshape(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        key_states = key_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
-        value_states = value_states.reshape(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        value_states = value_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
 
@@ -403,7 +403,8 @@ class DogeInnerFuncAttn(nn.Module):
                 f" {attn_output.size()}"
             )
 
-        attn_output = attn_output.transpose(1, 2).contiguous().reshape(bsz, seq_len, self.hidden_size)
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.reshape(bsz, seq_len, -1)
         attn_output = self.o_proj(attn_output)
 
         return attn_output, past_key_value
@@ -499,7 +500,7 @@ class DogeCDMoE(nn.Module):
 
         # efficient retrieval of private experts
         hidden_states = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
-        hidden_states = self.act_fn(hidden_states) * scores.softmax(dim=-1)
+        hidden_states = self.act_fn(hidden_states * scores.softmax(dim=-1))
         hidden_states = torch.einsum("b t h k, b t h k d -> b t d", hidden_states, up_embed)
         return hidden_states
 
