@@ -20,8 +20,8 @@ model:
   num_cdmmoe_experts_per_head: 2
 
 train:
-  dataset_path: "./datasets/pretrain_dataset"
-  logging_steps: 400
+  dataset_path: "/workspace/Doge/datasets/pretrain_datasets_en"
+  logging_steps: 100
   num_train_epochs: 2
   per_epoch_max_steps: 4000
   eval_steps: 400

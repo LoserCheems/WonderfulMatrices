@@ -13,7 +13,7 @@ from model.doge.modeling_doge import DogeForCausalLM
 if __name__ == '__main__':
     
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--config_path', type=str, default='configs/doge_25M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--config_path', type=str, default='./model/config/doge_25M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='logs')
     arg_parser.add_argument('--output_dir', type=str, default='results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./tokenizer', help='path to tokenizer')
@@ -26,8 +26,8 @@ if __name__ == '__main__':
         hyperparameters = yaml.load(f, Loader=yaml.FullLoader)
     
     model_name = args.config_path.split('/')[-1].split('.')[0]
-    logging_dir = f'{args.logging_dir}_{model_name}'
-    output_dir = f'{args.output_dir}_{model_name}'
+    logging_dir = f'{args.logging_dir}/{model_name}'
+    output_dir = f'{args.output_dir}/{model_name}'
 
     os.makedirs(logging_dir, exist_ok=True)
     logging.basicConfig(filename=f'{logging_dir}/log.log', level=logging.INFO)
@@ -41,7 +41,8 @@ if __name__ == '__main__':
         dataset = load_from_disk(hyperparameters['train']['dataset_path'])
     elif args.mode == 'finetune':
         dataset = load_from_disk(hyperparameters['finetune']['dataset_path'])
-    dataset["train"] = dataset["train"].shuffle(seed=233).select(range(hyperparameters['train']['per_epoch_max_steps'] * hyperparameters['train']['gradient_accumulation_steps']))
+    dataset["train"] = dataset["train"].select(range(hyperparameters['train']['per_epoch_max_steps'] * hyperparameters['train']['gradient_accumulation_steps']))
+
     # 加载模型
     # Load model
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
@@ -76,7 +77,6 @@ if __name__ == '__main__':
     logger.info(model)
     logger.info(num_params)
 
-
     # 训练参数
     training_args = TrainingArguments(
         seed=233,
@@ -101,7 +101,6 @@ if __name__ == '__main__':
         bf16=hyperparameters['train']['bf16'],
         max_grad_norm=hyperparameters['train']['max_grad_norm'],
         gradient_accumulation_steps=hyperparameters['train']['gradient_accumulation_steps'],
-        torch_compile=True if hyperparameters['train']['bf16'] else False,
     )
 
     data_collator = DataCollatorForLanguageModeling(
@@ -113,21 +112,8 @@ if __name__ == '__main__':
         args=training_args,
         train_dataset=dataset['train'],
         eval_dataset=dataset['test'],
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=data_collator,
     )
 
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
-    
-# trainer = Trainer(
-#     model=model,
-#     args=training_args,
-#     train_dataset=dataset['train'],
-#     eval_dataset=dataset['test'],
-#     tokenizer=tokenizer,
-#     data_collator=data_collator,
-# )
-
-# if __name__ == '__main__':
-    
-#     trainer.train(resume_from_checkpoint=)
