@@ -4,8 +4,8 @@ from transformers import AutoTokenizer
 from transformers import GenerationConfig
 from transformers import TextStreamer
 
-from models.configuration_doge import DogeConfig
-from models.modeling_doge import DogeForCausalLM
+from model.doge.configuration_doge import DogeConfig
+from model.doge.modeling_doge import DogeForCausalLM
 
 from datasets import load_from_disk
 
@@ -261,10 +261,10 @@ def evaluate_cmmlu(dataset_path, model, tokenizer):
 
 
 if __name__ == '__main__':
-    tokenizer = AutoTokenizer.from_pretrained('./models')
+    tokenizer = AutoTokenizer.from_pretrained('./tokenizer')
     config = DogeConfig()
     # 加载模型并推理
-    model = DogeForCausalLM(config=config)
+    model = DogeForCausalLM.from_pretrained('./result/doge_25M/checkpoint-2000')
 
     evaluate_chat("你叫什么名字?", model, tokenizer)
     # evaluate_mmlu('./Datasets/mmlu', model, tokenizer)
