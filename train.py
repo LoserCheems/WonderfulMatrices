@@ -18,7 +18,6 @@ if __name__ == '__main__':
     arg_parser.add_argument('--output_dir', type=str, default='results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./tokenizer', help='path to tokenizer')
     arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="path to checkpoint to resume training")
-    arg_parser.add_argument("--mode", type=str, default='pretrain', choices=['pretrain', 'finetune'], help='pretrain or finetune')
 
     args = arg_parser.parse_args()
 
@@ -37,10 +36,7 @@ if __name__ == '__main__':
 
     # 加载数据集
     # Load dataset
-    if args.mode == 'pretrain':
-        dataset = load_from_disk(hyperparameters['train']['dataset_path'])
-    elif args.mode == 'finetune':
-        dataset = load_from_disk(hyperparameters['finetune']['dataset_path'])
+    dataset = load_from_disk(hyperparameters['train']['dataset_path'])
     dataset["train"] = dataset["train"].select(range(hyperparameters['train']['per_epoch_max_steps'] * hyperparameters['train']['gradient_accumulation_steps']))
 
     # 加载模型
