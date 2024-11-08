@@ -34,6 +34,14 @@ class DogeConfig(PretrainedConfig):
         vocab_size (`int`, *optional*, defaults to 32768):
             Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the
             `inputs_ids` passed when calling [`DogeModel`]
+        image_size (`List[int]`, *optional*, defaults to [960, 540]):
+            Image size of the Doge model. Defines the size of the input image that can be represented by the
+            `pixel_values` passed when calling [`DogeModel`]
+        patch_size (`int`, *optional*, defaults to 16):
+            Patch size of the Doge model. Defines the size of the patches that will be extracted from the input image
+            and processed by the model.
+        num_channels (`int`, *optional*, defaults to 3):
+            Number of channels in the input image.
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
         num_hidden_layers (`int`, *optional*, defaults to 16):
@@ -122,6 +130,9 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
+        image_size=[960, 540],
+        patch_size=16,
+        num_channels=3,
         hidden_size=256,
         num_hidden_layers=8,
         hidden_bias=False,
@@ -147,6 +158,9 @@ class DogeConfig(PretrainedConfig):
         **kwargs,
     ):
         self.vocab_size = vocab_size
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.num_channels = num_channels
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
         self.hidden_bias = hidden_bias
