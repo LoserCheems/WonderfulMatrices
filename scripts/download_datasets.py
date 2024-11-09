@@ -4,9 +4,6 @@ import gzip
 from datasets import load_dataset
 from botocore.exceptions import ClientError
 from argparse import ArgumentParser
-import hf_transfer
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 s3 = boto3.client('s3')
 bucket_name = "softwareheritage"

@@ -2,6 +2,8 @@ from transformers import AutoTokenizer
 from datasets import load_from_disk
 from argparse import ArgumentParser
 
+# NOTE: 我们只保留 100B tokens 的数据集, 比例为 fineweb-edu:cosmopedia-v2:python-edu = 7:2:1, 如果你需要训练更大的模型, 请自行增加数据集的规模
+# NOTE: We only keep 100B tokens dataset, the ratio of fineweb-edu:cosmopedia-v2:python-edu = 7:2:1, if you need to train a larger model, please increase the scale of the dataset by yourself
 
 def process_cosmopedia(prompt, text):
     prompt = f"[INST]{prompt}[/INST]"
@@ -31,12 +33,12 @@ tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path, add_eos_token=Tru
 
 if __name__ == '__main__':
 
-    # # 分词宇宙百科
-    # # Tokenize Cosmopedia
-    # dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
-    # dataset = dataset.map(process_cosmopedia, input_columns=['prompt', 'text'], remove_columns=['prompt', 'text', 'token_length', 'audience', 'format', 'seed_data'], num_proc=args.num_proc)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + '/cosmopedia-v2_tokenized')
+    # 分词宇宙百科
+    # Tokenize Cosmopedia
+    dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
+    dataset = dataset.map(process_cosmopedia, input_columns=['prompt', 'text'], remove_columns=['prompt', 'text', 'token_length', 'audience', 'format', 'seed_data'], num_proc=args.num_proc)
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + '/cosmopedia-v2_tokenized')
 
 
     # # 分词中文宇宙百科
