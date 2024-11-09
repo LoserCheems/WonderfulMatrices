@@ -33,12 +33,28 @@ tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path, add_eos_token=Tru
 
 if __name__ == '__main__':
 
+<<<<<<< HEAD
     # 分词宇宙百科
     # Tokenize Cosmopedia
     dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
     dataset = dataset.map(process_cosmopedia, input_columns=['prompt', 'text'], remove_columns=['prompt', 'text', 'token_length', 'audience', 'format', 'seed_data'], num_proc=args.num_proc)
     print(dataset)
     dataset.save_to_disk(args.save_dir + '/cosmopedia-v2_tokenized')
+=======
+    # 分词fineweb-edu
+    # Tokenize fineweb-edu
+    dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
+    dataset = dataset.map(process_python_edu, input_columns=['text'], remove_columns=['text', 'id', 'metadata'], num_proc=args.num_proc)
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + '/fineweb-edu_tokenized')
+
+    # # 分词宇宙百科
+    # # Tokenize Cosmopedia
+    # dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
+    # dataset = dataset.map(process_cosmopedia, input_columns=['prompt', 'text'], remove_columns=['prompt', 'text', 'token_length', 'audience', 'format', 'seed_data'], num_proc=args.num_proc)
+    # print(dataset)
+    # dataset.save_to_disk(args.save_dir + '/cosmopedia-v2_tokenized')
+>>>>>>> 53b15355517416e0b184657495b1b60dd8aa585c
 
 
     # # 分词中文宇宙百科
@@ -48,12 +64,12 @@ if __name__ == '__main__':
     # print(dataset)
     # dataset.save_to_disk(args.save_dir + '/chinese-cosmopedia_tokenized')
 
-    # 分词Python教育
-    # Tokenize Python Education
-    dataset = load_from_disk(args.datasets_dir + '/python-edu')
-    dataset = dataset.map(process_python_edu, input_columns=['text'], remove_columns=['text', 'download_success', 'blob_id', 'repo_name', 'path', 'length_bytes', 'score', 'int_score'], num_proc=args.num_proc)
-    print(dataset)
-    dataset.save_to_disk(args.save_dir + '/python-edu_tokenized')
+    # # 分词Python教育
+    # # Tokenize Python Education
+    # dataset = load_from_disk(args.datasets_dir + '/python-edu')
+    # dataset = dataset.map(process_python_edu, input_columns=['text'], remove_columns=['text', 'download_success', 'blob_id', 'repo_name', 'path', 'length_bytes', 'score', 'int_score'], num_proc=args.num_proc)
+    # print(dataset)
+    # dataset.save_to_disk(args.save_dir + '/python-edu_tokenized')
 
     # # 分词无限指令
     # # Tokenize Infinity Instruct
