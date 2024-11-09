@@ -32,42 +32,28 @@ if __name__ == "__main__":
     parser.add_argument("--num_proc", type=int, default=1)
     args = parser.parse_args()
 
-    # # 下载fineweb-edu数据集
-    # # Download fineweb-edu dataset
-    # dataset = load_dataset("HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/fineweb-edu", num_proc=args.num_proc)
+    # 下载fineweb-edu数据集
+    # Download fineweb-edu dataset
+    dataset = load_dataset("HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + "/fineweb-edu", num_proc=args.num_proc)
 
-    # # 下载宇宙百科v2数据集
-    # # Download Cosmopedia-v2 dataset
-    # dataset = load_dataset("HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/cosmopedia-v2", num_proc=args.num_proc)
+    # 下载宇宙百科v2数据集
+    # Download Cosmopedia-v2 dataset
+    dataset = load_dataset("HuggingFaceTB/smollm-corpus", "cosmopedia-v2", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + "/cosmopedia-v2", num_proc=args.num_proc)
 
-    # # 下载中文宇宙百科数据集
-    # # Download Chinese Cosmopedia dataset
-    # dataset = load_dataset("opencsg/chinese-cosmopedia", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/chinese-cosmopedia", num_proc=args.num_proc)
+    # 下载Python教育数据集
+    # Download Python Education dataset
+    dataset = load_dataset("HuggingFaceTB/smollm-corpus", "python-edu", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
+    dataset = dataset.map(download_contents, input_columns="blob_id", num_proc=args.num_proc)
+    dataset = dataset.filter(lambda x: x['download_success'])
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + "/python-edu", num_proc=args.num_proc)
 
-    # # 下载Python教育数据集
-    # # Download Python Education dataset
-    # dataset = load_dataset("HuggingFaceTB/smollm-corpus", "python-edu", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # dataset = dataset.map(download_contents, input_columns="blob_id", num_proc=args.num_proc)
-    # dataset = dataset.filter(lambda x: x['download_success'])
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/python-edu", num_proc=args.num_proc)
-
-    # # 下载无限指令数据集
-    # # Download Infinity Instruct dataset
-    # dataset = load_dataset('BAAI/Infinity-Instruct', '0625', split='train', num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/infinity-instruct-0625", num_proc=args.num_proc)
-
-    # dataset = load_dataset('BAAI/Infinity-Instruct', '7M', split='train', num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/infinity-instruct-7M", num_proc=args.num_proc)
-
-    # dataset = load_dataset('BAAI/Infinity-Instruct', 'Gen', split='train', num_proc=args.num_proc, cache_dir=args.cache_dir)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + "/infinity-instruct-Gen", num_proc=args.num_proc)
+    # 下载开放网络数学数据集
+    # Download Open Web Math dataset
+    dataset = load_dataset("open-web-math/open-web-math", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + "/open-web-math", num_proc=args.num_proc)

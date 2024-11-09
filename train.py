@@ -34,10 +34,10 @@ if __name__ == '__main__':
     console_handler = logging.StreamHandler()
     logger.addHandler(console_handler)
 
-    # 加载数据集
-    # Load dataset
-    dataset = load_from_disk(hyperparameters['train']['dataset_path'])
-    dataset["train"] = dataset["train"].select(range(hyperparameters['train']['per_epoch_max_steps'] * hyperparameters['train']['gradient_accumulation_steps']))
+    # # 加载数据集
+    # # Load dataset
+    # dataset = load_from_disk(hyperparameters['train']['dataset_path'])
+    # dataset["train"] = dataset["train"].select(range(hyperparameters['train']['per_epoch_max_steps'] * hyperparameters['train']['gradient_accumulation_steps']))
 
     # 加载模型
     # Load model
@@ -73,43 +73,43 @@ if __name__ == '__main__':
     logger.info(model)
     logger.info(num_params)
 
-    # 训练参数
-    training_args = TrainingArguments(
-        seed=233,
-        logging_dir=logging_dir,
-        logging_steps=hyperparameters['train']['logging_steps'],
-        output_dir=output_dir,
-        do_train=True,
-        num_train_epochs=hyperparameters['train']['num_train_epochs'],
-        do_eval=True,
-        eval_strategy="steps",
-        eval_steps=hyperparameters['train']['eval_steps'],
-        per_device_train_batch_size=hyperparameters['train']['per_device_train_batch_size'],
-        per_device_eval_batch_size=hyperparameters['train']['per_device_eval_batch_size'],
-        weight_decay=hyperparameters['train']['weight_decay'],
-        learning_rate=hyperparameters['train']['learning_rate'],
-        warmup_ratio=hyperparameters['train']['warmup_ratio'],
-        lr_scheduler_type="cosine_with_min_lr",
-        lr_scheduler_kwargs={'min_lr_rate': hyperparameters['train']['min_lr_rate']},
-        save_safetensors=True,
-        save_strategy="steps",
-        save_steps=hyperparameters['train']['save_steps'],
-        bf16=hyperparameters['train']['bf16'],
-        max_grad_norm=hyperparameters['train']['max_grad_norm'],
-        gradient_accumulation_steps=hyperparameters['train']['gradient_accumulation_steps'],
-    )
+    # # 训练参数
+    # training_args = TrainingArguments(
+    #     seed=233,
+    #     logging_dir=logging_dir,
+    #     logging_steps=hyperparameters['train']['logging_steps'],
+    #     output_dir=output_dir,
+    #     do_train=True,
+    #     num_train_epochs=hyperparameters['train']['num_train_epochs'],
+    #     do_eval=True,
+    #     eval_strategy="steps",
+    #     eval_steps=hyperparameters['train']['eval_steps'],
+    #     per_device_train_batch_size=hyperparameters['train']['per_device_train_batch_size'],
+    #     per_device_eval_batch_size=hyperparameters['train']['per_device_eval_batch_size'],
+    #     weight_decay=hyperparameters['train']['weight_decay'],
+    #     learning_rate=hyperparameters['train']['learning_rate'],
+    #     warmup_ratio=hyperparameters['train']['warmup_ratio'],
+    #     lr_scheduler_type="cosine_with_min_lr",
+    #     lr_scheduler_kwargs={'min_lr_rate': hyperparameters['train']['min_lr_rate']},
+    #     save_safetensors=True,
+    #     save_strategy="steps",
+    #     save_steps=hyperparameters['train']['save_steps'],
+    #     bf16=hyperparameters['train']['bf16'],
+    #     max_grad_norm=hyperparameters['train']['max_grad_norm'],
+    #     gradient_accumulation_steps=hyperparameters['train']['gradient_accumulation_steps'],
+    # )
 
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer, mlm=False, mlm_probability=0.0
-    )
+    # data_collator = DataCollatorForLanguageModeling(
+    #     tokenizer=tokenizer, mlm=False, mlm_probability=0.0
+    # )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset['train'],
-        eval_dataset=dataset['test'],
-        processing_class=tokenizer,
-        data_collator=data_collator,
-    )
+    # trainer = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=dataset['train'],
+    #     eval_dataset=dataset['test'],
+    #     processing_class=tokenizer,
+    #     data_collator=data_collator,
+    # )
 
-    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    # trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
