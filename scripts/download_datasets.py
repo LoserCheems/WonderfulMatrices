@@ -35,11 +35,11 @@ if __name__ == "__main__":
     parser.add_argument("--num_proc", type=int, default=1)
     args = parser.parse_args()
 
-    # 下载fineweb-edu数据集
-    # Download fineweb-edu dataset
-    dataset = load_dataset("HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
-    print(dataset)
-    dataset.save_to_disk(args.save_dir + "/fineweb-edu", num_proc=args.num_proc)
+    # # 下载fineweb-edu数据集
+    # # Download fineweb-edu dataset
+    # dataset = load_dataset("HuggingFaceTB/smollm-corpus", "fineweb-edu-dedup", split="train", num_proc=args.num_proc, cache_dir=args.cache_dir)
+    # print(dataset)
+    # dataset.save_to_disk(args.save_dir + "/fineweb-edu", num_proc=args.num_proc)
 
     # # 下载宇宙百科v2数据集
     # # Download Cosmopedia-v2 dataset
