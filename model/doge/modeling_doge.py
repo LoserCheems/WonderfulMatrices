@@ -1033,6 +1033,158 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
         )
 
 
+class DogeVisionEmbedding(nn.Module):
+    """
+    This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
+    `hidden_states` of shape `(batch_size, 1, hidden_size)` to be consumed by a Transformer.
+    """
+
+    def __init__(self, config: DogeConfig):
+        super().__init__()
+        image_size, patch_size, num_channels = config.image_size, config.patch_size, config.num_channels
+
+        image_size = image_size if isinstance(image_size, list) else (image_size, image_size)
+        patch_size = patch_size if isinstance(patch_size, list) else (patch_size, patch_size)
+        num_patches = (image_size[0] // patch_size[0]) * (image_size[1] // patch_size[1])
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.num_channels = num_channels
+        self.num_patches = num_patches
+        self.hidden_size = config.hidden_size
+
+        self.proj = nn.Conv2d(num_channels, self.hidden_size, kernel_size=patch_size, stride=patch_size)
+
+    def forward(
+        self,
+        pixel_values: torch.Tensor,
+    ) -> torch.Tensor:
+        batch_size, num_channels, height, width = pixel_values.shape
+        if num_channels != self.num_channels:
+            raise ValueError(
+                f"Input image should have {self.num_channels} number of channels, but got {num_channels} instead."
+            )
+        
+        if height != self.image_size[0] or width != self.image_size[1]:
+            raise ValueError(
+                f"Input image should have size {self.image_size}, but got {height}*{width} instead."
+            )
+        
+        image_embedding = self.proj(pixel_values).flatten(2).transpose(1, 2).mean(dim=1)
+        return image_embedding
+
+
+class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
+    _tied_weights_keys = ["lm_head.weight"]
+
+    def __init__(self, config: DogeConfig):
+        super().__init__(config)
+        self.config = config
+        self.pixel_embed = DogeVisionEmbedding(config)
+        self.model = DogeModel(config)
+        self.vocab_size = config.vocab_size
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.word_embed
+
+    def set_input_embeddings(self, value):
+        self.model.word_embed = value
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        self.lm_head = new_embeddings
+
+    def set_decoder(self, decoder):
+        self.model = decoder
+
+    def get_decoder(self):
+        return self.model
+
+    @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
+    @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        pixel_values: torch.FloatTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[torch.Tensor] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        num_logits_to_keep: int = 0,
+        **loss_kwargs,
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        r"""
+        Args:
+            labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+                Labels for computing the masked language modeling loss. Indices should either be in `[0, ...,
+                config.vocab_size]` or -100 (see `input_ids` docstring). Tokens with indices set to `-100` are ignored
+                (masked), the loss is only computed for the tokens with labels in `[0, ..., config.vocab_size]`.
+
+            num_logits_to_keep (`int`, *optional*):
+                Calculate logits for the last `num_logits_to_keep` tokens. If `0`, calculate logits for all
+                `input_ids` (special case). Only last token logits are needed for generation, and calculating them only for that
+                token can save memory, which becomes pretty significant for long sequences or large vocabulary size.
+
+        Returns:
+        """
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if input_ids is not None:
+            inputs_embeds = self.model.word_embed(input_ids)
+        if pixel_values is not None:
+            pixel_embeds = self.pixel_embed(pixel_values)
+            inputs_embeds[:, -1, :] += pixel_embeds
+
+        # decoder output consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        outputs = self.model(
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            cache_position=cache_position,
+        )
+
+        hidden_states = outputs[0]
+
+        # only compute necessary logits, and do not upcast them to float if we are not computing the loss
+        logits = self.lm_head(hidden_states[:, -num_logits_to_keep:, :])
+
+        loss = None
+        if labels is not None:
+            loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.vocab_size, **loss_kwargs)
+
+        if not return_dict:
+            output = (logits,) + outputs[1:]
+            return (loss,) + output if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
+
+
 @add_start_docstrings(
     """
     The Doge Model transformer with a sequence classification head on top (linear layer).
