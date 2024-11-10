@@ -68,6 +68,7 @@ attn = InnerFuncAttn(
     d_model=dim,
     n_heads=1,
     n_inner_values=1,
+    d_inner_values_retrieval=64,
     max_position_embeddings=seq_len,
     layer_idx=0,
 )
@@ -93,6 +94,7 @@ cdmoe = CDMoE(
     d_model=dim,
     act_fn="silu",
     d_cross_domain=dim * 4,
+    d_private_expert_retrieval=64,
     d_private_expert=dim,
     n_experts=64,
     n_experts_heads=1,

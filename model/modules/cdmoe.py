@@ -32,6 +32,7 @@ class CDMoE(nn.Module):
         d_model: int,
         act_fn: str,
         d_cross_domain: int,
+        d_private_expert_retrieval: int,
         d_private_expert: int,
         n_experts: int,
         n_experts_heads: int,
@@ -41,7 +42,8 @@ class CDMoE(nn.Module):
         self.hidden_dim = d_model
         self.act_fn = ACT2FN[act_fn]
 
-        self.cross_domain_intermediate_size = d_cross_domain
+        self.cross_domain_intermediate_dim = d_cross_domain
+        self.private_expert_retrieval_dim = d_private_expert_retrieval
         self.private_expert_intermediate_dim = d_private_expert
 
         self.num_cdmmoe_experts = n_experts
@@ -51,18 +53,18 @@ class CDMoE(nn.Module):
         # shared parameter up Linear
         self.shared_up_proj = nn.Linear(
             self.hidden_dim,
-            self.cross_domain_intermediate_size,
+            self.cross_domain_intermediate_dim,
         )
         # shared parameter down Linear
         self.shared_down_proj = nn.Linear(
-            self.cross_domain_intermediate_size,
+            self.cross_domain_intermediate_dim,
             self.private_expert_intermediate_dim,
         )
 
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
             self.private_expert_intermediate_dim,
-            self.private_expert_intermediate_dim * self.num_cdmmoe_heads,
+            self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
             bias=False,
         )
         self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
@@ -71,7 +73,7 @@ class CDMoE(nn.Module):
                 self.num_cdmmoe_heads,
                 self.num_keys,
                 2,
-                self.private_expert_intermediate_dim // 2,
+                self.private_expert_retrieval_dim // 2,
             )
         )
 
@@ -98,7 +100,7 @@ class CDMoE(nn.Module):
         queries = self.queries(hidden_states)
         queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         # get similarity with keys
-        sim = torch.einsum("p b t h d, h k p d -> p b t h k", queries, self.keys)
+        sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
         # get expert scores and indices with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
 

@@ -15,10 +15,10 @@ DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
 
 # 上传到hub
 # Push to hub
-doge = DogeForCausalLM.from_pretrained("checkpoint-1300")
+doge = DogeForCausalLM.from_pretrained("./results/doge_200M_cdmoe/checkpoint-2000")
 # doge.push_to_hub("LoserCheems/Doge-200M")
-doge.save_pretrained("LoserCheems/Doge-200M")
+doge.save_pretrained("./results/Doge_Eval_200M/checkpoint-2000")
 
-tokenizer = AutoTokenizer.from_pretrained('checkpoint-1300')
+tokenizer = AutoTokenizer.from_pretrained("./results/doge_200M_cdmoe/checkpoint-2000")
 # tokenizer.push_to_hub("LoserCheems/Doge-200M")
-tokenizer.save_pretrained("LoserCheems/Doge-200M")
+tokenizer.save_pretrained("./results/Doge_Eval_200M/checkpoint-2000")

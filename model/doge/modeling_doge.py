@@ -187,20 +187,21 @@ class DogeInnerFuncAttn(nn.Module):
                 "when creating this class."
             )
 
-        self.hidden_size = config.hidden_size
+        self.hidden_dim = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
 
         # for accuracy of attention scores, we do not use GQA
-        self.attention_head_dim = self.hidden_size // self.num_attention_heads
+        self.attention_head_dim = self.hidden_dim // self.num_attention_heads
         self.num_inner_values = config.num_inner_values
+        self.inner_values_retrieval_dim = config.inner_values_retrieval_size
 
         self.q_proj = nn.Linear(
-            self.hidden_size,
+            self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
             bias=config.hidden_bias,
         )
         self.k_proj = nn.Linear(
-            self.hidden_size,
+            self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
             bias=config.hidden_bias,
         )
@@ -208,23 +209,23 @@ class DogeInnerFuncAttn(nn.Module):
             torch.round(torch.ones(self.num_attention_heads, config.max_position_embeddings))
         )
         self.v_queries = nn.Linear(
-            self.hidden_size,
-            self.attention_head_dim,
+            self.hidden_dim,
+            self.inner_values_retrieval_dim,
             bias=config.hidden_bias,
         )
         self.v_keys = nn.Parameter(
             torch.zeros(
                 self.num_inner_values,
-                self.attention_head_dim,
+                self.inner_values_retrieval_dim,
             )
         )
         self.v_embed = nn.Embedding(
             self.num_inner_values,
-            self.attention_head_dim * self.num_attention_heads,
+            self.hidden_dim,
         )
         self.o_proj = nn.Linear(
-            self.hidden_size,
-            self.hidden_size,
+            self.hidden_dim,
+            self.hidden_dim,
             bias=config.hidden_bias,
         )
 
@@ -418,8 +419,9 @@ class DogeCDMoE(nn.Module):
         self.hidden_dim = config.hidden_size
         self.act_fn = ACT2FN[config.hidden_act]
 
-        self.cross_domain_intermediate_size = config.cross_domain_intermediate_size
+        self.cross_domain_intermediate_dim = config.cross_domain_intermediate_size
         self.private_expert_intermediate_dim = config.private_expert_intermediate_size
+        self.private_expert_retrieval_dim = config.private_expert_retrieval_size
 
         self.num_cdmmoe_experts = config.num_cdmmoe_experts
         self.num_cdmmoe_heads = config.num_cdmmoe_heads
@@ -428,12 +430,12 @@ class DogeCDMoE(nn.Module):
         # shared parameter up Linear
         self.shared_up_proj = nn.Linear(
             self.hidden_dim,
-            self.cross_domain_intermediate_size,
+            self.cross_domain_intermediate_dim,
             bias=config.hidden_bias,
         )
         # shared parameter down Linear
         self.shared_down_proj = nn.Linear(
-            self.cross_domain_intermediate_size,
+            self.cross_domain_intermediate_dim,
             self.private_expert_intermediate_dim,
             bias=config.hidden_bias,
         )
@@ -441,7 +443,7 @@ class DogeCDMoE(nn.Module):
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
             self.private_expert_intermediate_dim,
-            self.private_expert_intermediate_dim * self.num_cdmmoe_heads,
+            self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
             bias=False,
         )
         self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
@@ -450,7 +452,7 @@ class DogeCDMoE(nn.Module):
                 self.num_cdmmoe_heads,
                 self.num_keys,
                 2,
-                self.private_expert_intermediate_dim // 2,
+                self.private_expert_retrieval_dim // 2,
             )
         )
 
@@ -478,7 +480,7 @@ class DogeCDMoE(nn.Module):
         queries = self.queries(hidden_states)
         queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         # get similarity with keys
-        sim = torch.einsum("p b t h d, h k p d -> p b t h k", queries, self.keys)
+        sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
         # get expert scores and indices with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
 

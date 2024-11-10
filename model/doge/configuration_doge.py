@@ -34,7 +34,7 @@ class DogeConfig(PretrainedConfig):
         vocab_size (`int`, *optional*, defaults to 32768):
             Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the
             `inputs_ids` passed when calling [`DogeModel`]
-        image_size (`List[int]`, *optional*, defaults to [960, 540]):
+        image_size (`List[int]`, *optional*, defaults to [540, 960]):
             Image size of the Doge model. Defines the size of the input image that can be represented by the
             `pixel_values` passed when calling [`DogeModel`]
         patch_size (`int`, *optional*, defaults to 16):
@@ -108,19 +108,23 @@ class DogeConfig(PretrainedConfig):
             End of stream token id.
         tie_word_embeddings (`bool`, *optional*, defaults to `False`):
             Whether to tie weight embeddings
-        num_attention_heads (`int`, *optional*, defaults to 16):
+        num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
         num_inner_values (`int`, *optional*, defaults to 8):
             Number of inner values for each attention layer in the Transformer decoder.
+        inner_values_retrieval_size (`int`, *optional*, defaults to 128):
+            Dimension of the inner values retrieval states for each attention layer in the Transformer decoder
         cross_domain_intermediate_size (`int`, *optional*, defaults to 4096):
             Dimension of the Cross Domain representations for the Cross Domain Mixture of Experts.
+        private_expert_retrieval_size (`int`, *optional*, defaults to 256):
+            Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
         private_expert_intermediate_size (`int`, *optional*, defaults to 1024):
             Dimension of the Private Expert representations for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
             Number of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_heads (`int`, *optional*, defaults to 1):
+        num_cdmmoe_heads (`int`, *optional*, defaults to 2):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 2):
+        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 4):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
     """
 
@@ -130,11 +134,11 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
-        image_size=[960, 540],
+        image_size=[540, 960],
         patch_size=16,
         num_channels=3,
-        hidden_size=256,
-        num_hidden_layers=8,
+        hidden_size=1024,
+        num_hidden_layers=16,
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
@@ -148,11 +152,13 @@ class DogeConfig(PretrainedConfig):
         bos_token_id=1,
         eos_token_id=2,
         tie_word_embeddings=False,
-        num_attention_heads=4,
-        num_inner_values=2,
-        cross_domain_intermediate_size=1024,
-        private_expert_intermediate_size=256,
-        num_cdmmoe_experts=256,
+        num_attention_heads=8,
+        num_inner_values=8,
+        inner_values_retrieval_size=128,
+        cross_domain_intermediate_size=4096,
+        private_expert_retrieval_size=256,
+        private_expert_intermediate_size=1024,
+        num_cdmmoe_experts=4096,
         num_cdmmoe_heads=2,
         num_cdmmoe_experts_per_head=4,
         **kwargs,
@@ -178,7 +184,9 @@ class DogeConfig(PretrainedConfig):
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
         self.num_inner_values = num_inner_values
+        self.inner_values_retrieval_size = inner_values_retrieval_size
         self.cross_domain_intermediate_size = cross_domain_intermediate_size
+        self.private_expert_retrieval_size = private_expert_retrieval_size
         self.private_expert_intermediate_size = private_expert_intermediate_size
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads

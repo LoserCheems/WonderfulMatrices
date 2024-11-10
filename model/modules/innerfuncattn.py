@@ -33,6 +33,7 @@ class InnerFuncAttn(nn.Module):
         d_model: int,
         n_heads: int,
         n_inner_values: int,
+        d_inner_values_retrieval: int,
         max_position_embeddings: int,
         layer_idx: Optional[int] = None
     ):
@@ -40,41 +41,42 @@ class InnerFuncAttn(nn.Module):
 
         self.layer_idx = layer_idx
 
-        self.hidden_size = d_model
+        self.hidden_dim = d_model
         self.num_attention_heads = n_heads
 
         # for accuracy of attention scores, we do not use GQA
-        self.attention_head_dim = self.hidden_size // self.num_attention_heads
+        self.attention_head_dim = self.hidden_dim // self.num_attention_heads
         self.num_inner_values = n_inner_values
+        self.inner_values_retrieval_dim = d_inner_values_retrieval
 
         self.q_proj = nn.Linear(
-            self.hidden_size,
+            self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
         )
         self.k_proj = nn.Linear(
-            self.hidden_size,
+            self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
         )
         self.dynamic_mask = nn.Parameter(
             torch.round(torch.ones(self.num_attention_heads, max_position_embeddings))
         )
         self.v_queries = nn.Linear(
-            self.hidden_size,
-            self.attention_head_dim,
+            self.hidden_dim,
+            self.inner_values_retrieval_dim,
         )
         self.v_keys = nn.Parameter(
             torch.zeros(
                 self.num_inner_values,
-                self.attention_head_dim,
+                self.inner_values_retrieval_dim,
             )
         )
         self.v_embed = nn.Embedding(
             self.num_inner_values,
-            self.attention_head_dim * self.num_attention_heads,
+            self.hidden_dim,
         )
         self.o_proj = nn.Linear(
-            self.hidden_size,
-            self.hidden_size,
+            self.hidden_dim,
+            self.hidden_dim,
         )
 
     def _update_causal_mask(
