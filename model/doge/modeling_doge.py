@@ -195,6 +195,7 @@ class DogeInnerFuncAttn(nn.Module):
         self.num_inner_values = config.num_inner_values
         self.inner_values_retrieval_dim = config.inner_values_retrieval_size
 
+        # Q and K projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
@@ -205,9 +206,13 @@ class DogeInnerFuncAttn(nn.Module):
             self.attention_head_dim * self.num_attention_heads,
             bias=config.hidden_bias,
         )
+
+        # dynamic mask for the QK^T attention score matrix
         self.dynamic_mask = nn.Parameter(
             torch.round(torch.ones(self.num_attention_heads, config.max_position_embeddings))
         )
+
+        # queries and keys for retrieval V
         self.v_queries = nn.Linear(
             self.hidden_dim,
             self.inner_values_retrieval_dim,
@@ -219,10 +224,13 @@ class DogeInnerFuncAttn(nn.Module):
                 self.inner_values_retrieval_dim,
             )
         )
+
+        # V for inner function
         self.v_embed = nn.Embedding(
             self.num_inner_values,
             self.hidden_dim,
         )
+
         self.o_proj = nn.Linear(
             self.hidden_dim,
             self.hidden_dim,
@@ -237,9 +245,6 @@ class DogeInnerFuncAttn(nn.Module):
         past_key_values: Cache = None,
         output_attentions: bool = False,
     ):
-        # for SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
-        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
-        # to infer the attention mask.
         past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
         using_static_cache = isinstance(past_key_values, StaticCache)
 
@@ -475,11 +480,12 @@ class DogeCDMoE(nn.Module):
         # queries
         queries = self.queries(hidden_states)
         queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
+
         # get similarity with keys
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
+
         # get expert scores and indices with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
-
         if einx_add is not None:
             all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
             all_indices = einx_add("... i, ... j -> ... (i j)", indices_x * self.num_keys, indices_y)
@@ -488,7 +494,6 @@ class DogeCDMoE(nn.Module):
             all_scores = all_scores.view(*scores_x.shape[:-1], -1)
             all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
             all_indices = all_indices.view(*indices_x.shape[:-1], -1)
-
         scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
 

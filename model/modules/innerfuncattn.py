@@ -49,6 +49,7 @@ class InnerFuncAttn(nn.Module):
         self.num_inner_values = n_inner_values
         self.inner_values_retrieval_dim = d_inner_values_retrieval
 
+        # Q and K projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
@@ -57,9 +58,13 @@ class InnerFuncAttn(nn.Module):
             self.hidden_dim,
             self.attention_head_dim * self.num_attention_heads,
         )
+
+        # dynamic mask for the QK^T attention score matrix
         self.dynamic_mask = nn.Parameter(
             torch.round(torch.ones(self.num_attention_heads, max_position_embeddings))
         )
+
+        # queries and keys for retrieval V
         self.v_queries = nn.Linear(
             self.hidden_dim,
             self.inner_values_retrieval_dim,
@@ -70,10 +75,13 @@ class InnerFuncAttn(nn.Module):
                 self.inner_values_retrieval_dim,
             )
         )
+
+        # V for inner function
         self.v_embed = nn.Embedding(
             self.num_inner_values,
             self.hidden_dim,
         )
+
         self.o_proj = nn.Linear(
             self.hidden_dim,
             self.hidden_dim,

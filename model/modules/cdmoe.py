@@ -90,17 +90,16 @@ class CDMoE(nn.Module):
         **kwargs,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         bsz, seq_len, _ = hidden_states.shape
-        # cross-domain
-        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states)))
 
         # queries
         queries = self.queries(hidden_states)
         queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
+
         # get similarity with keys
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
+
         # get expert scores and indices with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
-
         if einx_add is not None:
             all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
             all_indices = einx_add("... i, ... j -> ... (i j)", indices_x * self.num_keys, indices_y)
@@ -109,7 +108,6 @@ class CDMoE(nn.Module):
             all_scores = all_scores.view(*scores_x.shape[:-1], -1)
             all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
             all_indices = all_indices.view(*indices_x.shape[:-1], -1)
-
         scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
 
@@ -119,5 +117,8 @@ class CDMoE(nn.Module):
 
         # efficient retrieval of private experts
         experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
-        hidden_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed) + hidden_states
+        experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
+
+        # mix with shared parameters
+        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states))) + experts_states
         return hidden_states
