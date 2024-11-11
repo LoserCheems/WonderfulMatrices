@@ -44,6 +44,8 @@ class DogeConfig(PretrainedConfig):
             Number of channels in the input image.
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
+        intermediate_size (`int`, *optional*, defaults to 4096):
+            Dimension of the CDMoE representations.
         num_hidden_layers (`int`, *optional*, defaults to 16):
             Number of hidden layers in the Transformer decoder.
         hidden_bias (`bool`, *optional*, defaults to `False`):
@@ -114,12 +116,8 @@ class DogeConfig(PretrainedConfig):
             Number of inner values for each attention layer in the Transformer decoder.
         inner_values_retrieval_size (`int`, *optional*, defaults to 128):
             Dimension of the inner values retrieval states for each attention layer in the Transformer decoder
-        cross_domain_intermediate_size (`int`, *optional*, defaults to 4096):
-            Dimension of the Cross Domain representations for the Cross Domain Mixture of Experts.
         private_expert_retrieval_size (`int`, *optional*, defaults to 256):
             Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
-        private_expert_intermediate_size (`int`, *optional*, defaults to 1024):
-            Dimension of the Private Expert representations for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
             Number of Private Experts for the Cross Domain Mixture of Experts.
         num_cdmmoe_heads (`int`, *optional*, defaults to 2):
@@ -138,6 +136,7 @@ class DogeConfig(PretrainedConfig):
         patch_size=16,
         num_channels=3,
         hidden_size=1024,
+        intermediate_size=4096,
         num_hidden_layers=16,
         hidden_bias=False,
         hidden_dropout=0.0,
@@ -155,9 +154,7 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads=8,
         num_inner_values=8,
         inner_values_retrieval_size=128,
-        cross_domain_intermediate_size=4096,
         private_expert_retrieval_size=256,
-        private_expert_intermediate_size=1024,
         num_cdmmoe_experts=4096,
         num_cdmmoe_heads=2,
         num_cdmmoe_experts_per_head=4,
@@ -168,6 +165,7 @@ class DogeConfig(PretrainedConfig):
         self.patch_size = patch_size
         self.num_channels = num_channels
         self.hidden_size = hidden_size
+        self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
         self.hidden_bias = hidden_bias
         self.hidden_dropout = hidden_dropout
@@ -185,9 +183,7 @@ class DogeConfig(PretrainedConfig):
         self.num_attention_heads = num_attention_heads
         self.num_inner_values = num_inner_values
         self.inner_values_retrieval_size = inner_values_retrieval_size
-        self.cross_domain_intermediate_size = cross_domain_intermediate_size
         self.private_expert_retrieval_size = private_expert_retrieval_size
-        self.private_expert_intermediate_size = private_expert_intermediate_size
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head

@@ -418,11 +418,9 @@ class DogeCDMoE(nn.Module):
         super().__init__()
         self.hidden_dim = config.hidden_size
         self.act_fn = ACT2FN[config.hidden_act]
+        self.intermediate_dim = config.intermediate_size
 
-        self.cross_domain_intermediate_dim = config.cross_domain_intermediate_size
-        self.private_expert_intermediate_dim = config.private_expert_intermediate_size
         self.private_expert_retrieval_dim = config.private_expert_retrieval_size
-
         self.num_cdmmoe_experts = config.num_cdmmoe_experts
         self.num_cdmmoe_heads = config.num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
@@ -430,19 +428,19 @@ class DogeCDMoE(nn.Module):
         # shared parameter up Linear
         self.shared_up_proj = nn.Linear(
             self.hidden_dim,
-            self.cross_domain_intermediate_dim,
+            self.intermediate_dim,
             bias=config.hidden_bias,
         )
         # shared parameter down Linear
         self.shared_down_proj = nn.Linear(
-            self.cross_domain_intermediate_dim,
-            self.private_expert_intermediate_dim,
+            self.intermediate_dim,
+            self.hidden_dim,
             bias=config.hidden_bias,
         )
 
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
-            self.private_expert_intermediate_dim,
+            self.hidden_dim,
             self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
             bias=False,
         )
@@ -459,7 +457,7 @@ class DogeCDMoE(nn.Module):
         # private experts
         self.down_embed = nn.Embedding(
             self.num_cdmmoe_experts,
-            self.private_expert_intermediate_dim,
+            self.hidden_dim,
         )
         self.up_embed = nn.Embedding(
             self.num_cdmmoe_experts,
@@ -501,9 +499,8 @@ class DogeCDMoE(nn.Module):
         up_embed = self.up_embed(indices)
 
         # efficient retrieval of private experts
-        hidden_states = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
-        hidden_states = self.act_fn(hidden_states * scores.softmax(dim=-1))
-        hidden_states = torch.einsum("b t h k, b t h k d -> b t d", hidden_states, up_embed)
+        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
+        hidden_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed) + hidden_states
         return hidden_states
 
 

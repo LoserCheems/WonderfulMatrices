@@ -1,6 +1,7 @@
 model:
   vocab_size: 32768
   hidden_size: 1536
+  intermediate_size: 6144
   num_hidden_layers: 24
   hidden_bias: False
   hidden_dropout: 0.0
@@ -14,9 +15,7 @@ model:
   num_attention_heads: 12
   num_inner_values: 12
   inner_values_retrieval_size: 128
-  cross_domain_intermediate_size: 6144
   private_expert_retrieval_size: 256
-  private_expert_intermediate_size: 1536
   num_cdmmoe_experts: 6144
   num_cdmmoe_heads: 3
   num_cdmmoe_experts_per_head: 6

@@ -13,7 +13,7 @@ from model.doge.modeling_doge import DogeForCausalLM
 if __name__ == '__main__':
     
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--config_path', type=str, default='./model/config/doge_25M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--config_path', type=str, default='./model/config/doge_22M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='logs')
     arg_parser.add_argument('--output_dir', type=str, default='results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./tokenizer', help='path to tokenizer')
@@ -48,6 +48,7 @@ if __name__ == '__main__':
         config = DogeConfig(
             vocab_size=hyperparameters['model']['vocab_size'],
             hidden_size=hyperparameters['model']['hidden_size'],
+            intermediate_size=hyperparameters['model']['intermediate_size'],
             num_hidden_layers=hyperparameters['model']['num_hidden_layers'],
             hidden_bias=hyperparameters['model']['hidden_bias'],
             hidden_dropout=hyperparameters['model']['hidden_dropout'],
@@ -61,9 +62,7 @@ if __name__ == '__main__':
             num_attention_heads=hyperparameters['model']['num_attention_heads'],
             num_inner_values=hyperparameters['model']['num_inner_values'],
             inner_values_retrieval_size=hyperparameters['model']['inner_values_retrieval_size'],
-            cross_domain_intermediate_size=hyperparameters['model']['cross_domain_intermediate_size'],
             private_expert_retrieval_size=hyperparameters['model']['private_expert_retrieval_size'],
-            private_expert_intermediate_size=hyperparameters['model']['private_expert_intermediate_size'],
             num_cdmmoe_experts=hyperparameters['model']['num_cdmmoe_experts'],
             num_cdmmoe_heads=hyperparameters['model']['num_cdmmoe_heads'],
             num_cdmmoe_experts_per_head=hyperparameters['model']['num_cdmmoe_experts_per_head'],

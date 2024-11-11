@@ -25,4 +25,4 @@ if __name__ == '__main__':
 
     # 保存数据集
     # Save dataset
-    dataset.save_to_disk(args.save_dir + "/pretrain_datasets", num_proc=args.num_proc)
+    dataset.save_to_disk(args.save_dir + "/pretrain_datasets", num_proc=args.num_proc, num_shards={'train': 1024, 'test': 1 })
