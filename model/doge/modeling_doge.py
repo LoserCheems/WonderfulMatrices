@@ -471,8 +471,6 @@ class DogeCDMoE(nn.Module):
         **kwargs,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         bsz, seq_len, _ = hidden_states.shape
-        # cross-domain
-        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states)))
 
         # queries
         queries = self.queries(hidden_states)
@@ -500,7 +498,10 @@ class DogeCDMoE(nn.Module):
 
         # efficient retrieval of private experts
         experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
-        hidden_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed) + hidden_states
+        experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
+
+        # mix with shared parameters
+        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states))) + experts_states
         return hidden_states
 
 
