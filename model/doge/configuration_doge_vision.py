@@ -34,6 +34,14 @@ class DogeConfig(PretrainedConfig):
         vocab_size (`int`, *optional*, defaults to 32768):
             Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the
             `inputs_ids` passed when calling [`DogeModel`]
+        image_size (`List[int]`, *optional*, defaults to [540, 960]):
+            Image size of the Doge model. Defines the size of the input image that can be represented by the
+            `pixel_values` passed when calling [`DogeModel`]
+        patch_size (`int`, *optional*, defaults to 16):
+            Patch size of the Doge model. Defines the size of the patches that will be extracted from the input image
+            and processed by the model.
+        num_channels (`int`, *optional*, defaults to 3):
+            Number of channels in the input image.
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
         intermediate_size (`int`, *optional*, defaults to 4096):
@@ -124,9 +132,13 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
-        hidden_size=1024,
-        intermediate_size=4096,
-        num_hidden_layers=16,
+        image_size=[512, 672],
+        patch_size=16,
+        num_channels=3,
+        num_detection_tokens=100,
+        hidden_size=256,
+        intermediate_size=1024,
+        num_hidden_layers=4,
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
@@ -144,12 +156,16 @@ class DogeConfig(PretrainedConfig):
         num_inner_values=8,
         inner_values_retrieval_size=128,
         private_expert_retrieval_size=256,
-        num_cdmmoe_experts=4096,
-        num_cdmmoe_heads=2,
-        num_cdmmoe_experts_per_head=4,
+        num_cdmmoe_experts=1024,
+        num_cdmmoe_heads=1,
+        num_cdmmoe_experts_per_head=2,
         **kwargs,
     ):
         self.vocab_size = vocab_size
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.num_channels = num_channels
+        self.num_detection_tokens = num_detection_tokens
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
