@@ -132,6 +132,7 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
+        num_labels=9,
         image_size=[512, 672],
         patch_size=16,
         num_channels=3,
@@ -162,6 +163,7 @@ class DogeConfig(PretrainedConfig):
         **kwargs,
     ):
         self.vocab_size = vocab_size
+        self.num_labels = num_labels
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_channels = num_channels
@@ -201,5 +203,6 @@ class DogeConfig(PretrainedConfig):
             bos_token_id=bos_token_id,
             eos_token_id=eos_token_id,
             tie_word_embeddings=tie_word_embeddings,
+            num_labels=num_labels,
             **kwargs,
         )

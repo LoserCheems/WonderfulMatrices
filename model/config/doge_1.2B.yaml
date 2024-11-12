@@ -17,23 +17,23 @@ model:
   inner_values_retrieval_size: 128
   private_expert_retrieval_size: 256
   num_cdmmoe_experts: 6144
-  num_cdmmoe_heads: 3
-  num_cdmmoe_experts_per_head: 6
+  num_cdmmoe_heads: 6
+  num_cdmmoe_experts_per_head: 12
 
 train:
   dataset_path: "/workspace/Doge/datasets/pretrain_datasets"
   logging_steps: 100
   num_train_epochs: 1
-  per_epoch_max_steps: 40000
+  per_epoch_max_steps: 80000
   eval_steps: 100
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
   weight_decay: 0.01
-  learning_rate: 0.0002
+  learning_rate: 0.0003
   warmup_ratio: 0.1
   min_lr_rate: 0.1
   save_safetensors: True
   save_steps: 100
   bf16: True
   max_grad_norm: 1.0
-  gradient_accumulation_steps: 1024
+  gradient_accumulation_steps: 2048

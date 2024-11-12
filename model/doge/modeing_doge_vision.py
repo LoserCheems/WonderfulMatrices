@@ -45,7 +45,7 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from .configuration_doge import DogeConfig
+from .configuration_doge_vision import DogeConfig
 
 
 

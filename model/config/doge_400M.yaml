@@ -14,26 +14,26 @@ model:
   eos_token_id: 2
   num_attention_heads: 8
   num_inner_values: 8
-  inner_values_retrieval_size: 64
-  private_expert_retrieval_size: 128
+  inner_values_retrieval_size: 128
+  private_expert_retrieval_size: 256
   num_cdmmoe_experts: 4096
-  num_cdmmoe_heads: 2
-  num_cdmmoe_experts_per_head: 4
+  num_cdmmoe_heads: 4
+  num_cdmmoe_experts_per_head: 8
 
 train:
   dataset_path: "/workspace/Doge/datasets/pretrain_datasets"
   logging_steps: 100
   num_train_epochs: 1
-  per_epoch_max_steps: 20000
+  per_epoch_max_steps: 40000
   eval_steps: 100
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
   weight_decay: 0.01
-  learning_rate: 0.0003
+  learning_rate: 0.0004
   warmup_ratio: 0.1
   min_lr_rate: 0.1
   save_safetensors: True
   save_steps: 100
   bf16: True
   max_grad_norm: 1.0
-  gradient_accumulation_steps: 512
+  gradient_accumulation_steps: 1024
