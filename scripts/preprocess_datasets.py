@@ -35,36 +35,41 @@ if __name__ == '__main__':
 
     # 计算fineweb-edu, cosmopedia-v2, python-edu, open-web-math的大小
     # Calculate the size of fineweb-edu, cosmopedia-v2, python-edu, open-web-math
-    fineweb_edu_size = int(args.tokens * 0.7 // (args.max_length // 1000 * 1000))
-    cosmopedia_v2_size = int(args.tokens * 0.2 // (args.max_length // 1000 * 1000))
-    python_edu_size = int(args.tokens * 0.05 // (args.max_length // 1000 * 1000))
-    open_web_math_size = int(args.tokens * 0.05 // (args.max_length // 1000 * 1000))
+    fineweb_edu_ratio, cosmopedia_v2_ratio, python_edu_ratio, open_web_math_ratio = 0.7, 0.2, 0.05, 0.05
+    fineweb_edu_size = int(args.tokens * fineweb_edu_ratio // (args.max_length // 1000 * 1000))
+    cosmopedia_v2_size = int(args.tokens * cosmopedia_v2_ratio // (args.max_length // 1000 * 1000))
+    python_edu_size = int(args.tokens * python_edu_ratio // (args.max_length // 1000 * 1000))
+    open_web_math_size = int(args.tokens * open_web_math_ratio // (args.max_length // 1000 * 1000))
 
 
-    # 分词fineweb-edu
-    # Tokenize fineweb-edu
-    dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
-    dataset = dataset.select(range(fineweb_edu_size + (1000 * fineweb_edu_size))).map(process_python_edu, input_columns=['text'], remove_columns=['text', 'id', 'metadata'], num_proc=args.num_proc)
-    print(dataset)
-    dataset.save_to_disk(args.save_dir + '/fineweb-edu_tokenized')
+    # # 分词fineweb-edu
+    # # Tokenize fineweb-edu
+    # dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
+    # dataset = dataset.shuffle(seed=233)
+    # dataset = dataset.select(range(fineweb_edu_size + int((1000 * fineweb_edu_ratio)))).map(process_python_edu, input_columns=['text'], remove_columns=['text', 'id', 'metadata'], num_proc=args.num_proc)
+    # print(dataset)
+    # dataset.save_to_disk(args.save_dir + '/fineweb-edu_tokenized')
 
     # 分词宇宙百科
     # Tokenize Cosmopedia
     dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
-    dataset = dataset.select(range(cosmopedia_v2_size + (1000 * cosmopedia_v2_size))).map(process_cosmopedia, input_columns=['prompt', 'text'], remove_columns=['prompt', 'text', 'token_length', 'audience', 'format', 'seed_data'], num_proc=args.num_proc)
+    dataset = dataset.shuffle(seed=233)
+    dataset = dataset.select(range(cosmopedia_v2_size + int((1000 * cosmopedia_v2_ratio)))).map(process_cosmopedia, input_columns=['prompt', 'text'], remove_columns=['prompt', 'text', 'token_length', 'audience', 'format', 'seed_data'], num_proc=args.num_proc)
     print(dataset)
     dataset.save_to_disk(args.save_dir + '/cosmopedia-v2_tokenized')
 
     # 分词Python教育
     # Tokenize Python Education
     dataset = load_from_disk(args.datasets_dir + '/python-edu')
-    dataset = dataset.select(range(python_edu_size + (1000 * python_edu_size))).map(process_python_edu, input_columns=['text'], remove_columns=['text', 'download_success', 'blob_id', 'repo_name', 'path', 'length_bytes', 'score', 'int_score'], num_proc=args.num_proc)
+    dataset = dataset.shuffle(seed=233)
+    dataset = dataset.select(range(python_edu_size + int((1000 * python_edu_ratio)))).map(process_python_edu, input_columns=['text'], remove_columns=['text', 'download_success', 'blob_id', 'repo_name', 'path', 'length_bytes', 'score', 'int_score'], num_proc=args.num_proc)
     print(dataset)
     dataset.save_to_disk(args.save_dir + '/python-edu_tokenized')
 
     # 分词开放网络数学
     # Tokenize Open Web Math
     dataset = load_from_disk(args.datasets_dir + '/open-web-math')
-    dataset = dataset.select(range(open_web_math_size + (1000 * open_web_math_size))).map(process_open_web_math, input_columns=['text'], remove_columns=['text', 'url', 'date', 'metadata'], num_proc=args.num_proc)
+    dataset = dataset.shuffle(seed=233)
+    dataset = dataset.select(range(open_web_math_size + int((1000 * open_web_math_ratio)))).map(process_open_web_math, input_columns=['text'], remove_columns=['text', 'url', 'date', 'metadata'], num_proc=args.num_proc)
     print(dataset)
     dataset.save_to_disk(args.save_dir + '/open-web-math_tokenized')
