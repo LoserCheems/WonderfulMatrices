@@ -387,15 +387,18 @@ class DogeInnerFuncAttn(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
+        # compute attention scores matrix
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
+        # add mask to attention scores
         causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
-        # no matter the length, we just slice it
         causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
         attn_weights = attn_weights + causal_mask
 
-        # upcast attention to fp32
+        # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+
+        # apply attention scores to value states
         attn_output = torch.matmul(attn_weights, value_states)
 
         if attn_output.size() != (
@@ -430,14 +433,13 @@ class DogeCDMoE(nn.Module):
         self.num_cdmmoe_heads = config.num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
 
-        # shared parameter up Linear
-        self.shared_up_proj = nn.Linear(
+        # cross domain
+        self.up_proj = nn.Linear(
             self.hidden_dim,
             self.intermediate_dim,
             bias=config.hidden_bias,
         )
-        # shared parameter down Linear
-        self.shared_down_proj = nn.Linear(
+        self.down_proj = nn.Linear(
             self.intermediate_dim,
             self.hidden_dim,
             bias=config.hidden_bias,
@@ -477,11 +479,9 @@ class DogeCDMoE(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         bsz, seq_len, _ = hidden_states.shape
 
-        # queries
+        # get similarity with queries and keys
         queries = self.queries(hidden_states)
         queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
-
-        # get similarity with keys
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
         # get expert scores and indices with the highest similarity
@@ -505,8 +505,8 @@ class DogeCDMoE(nn.Module):
         experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
-        # mix with shared parameters
-        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states))) + experts_states
+        # mix with shared parameters of cross domain
+        hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states))) + experts_states
         return hidden_states
 
 
