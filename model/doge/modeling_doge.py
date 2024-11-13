@@ -198,12 +198,12 @@ class DogeInnerFuncAttn(nn.Module):
         # Q and K projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
-            self.attention_head_dim * self.num_attention_heads,
+            self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
         self.k_proj = nn.Linear(
             self.hidden_dim,
-            self.attention_head_dim * self.num_attention_heads,
+            self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
 
@@ -401,17 +401,6 @@ class DogeInnerFuncAttn(nn.Module):
         # apply attention scores to value states
         attn_output = torch.matmul(attn_weights, value_states)
 
-        if attn_output.size() != (
-            bsz,
-            self.num_attention_heads,
-            seq_len,
-            self.attention_head_dim,
-        ):
-            raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_attention_heads, seq_len, self.attention_head_dim)}, but is"
-                f" {attn_output.size()}"
-            )
-
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, seq_len, -1)
         attn_output = self.o_proj(attn_output)
@@ -448,7 +437,7 @@ class DogeCDMoE(nn.Module):
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
             self.hidden_dim,
-            self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
+            self.num_cdmmoe_heads * self.private_expert_retrieval_dim,
             bias=False,
         )
         self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
@@ -506,7 +495,8 @@ class DogeCDMoE(nn.Module):
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
         # mix with shared parameters of cross domain
-        hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states))) + experts_states
+        hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states)))
+        hidden_states = hidden_states + experts_states
         return hidden_states
 
 

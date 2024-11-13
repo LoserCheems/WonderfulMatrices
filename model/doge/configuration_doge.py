@@ -112,9 +112,9 @@ class DogeConfig(PretrainedConfig):
             Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
             Number of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_heads (`int`, *optional*, defaults to 2):
+        num_cdmmoe_heads (`int`, *optional*, defaults to 4):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 4):
+        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
     """
 
@@ -145,8 +145,8 @@ class DogeConfig(PretrainedConfig):
         inner_values_retrieval_size=128,
         private_expert_retrieval_size=256,
         num_cdmmoe_experts=4096,
-        num_cdmmoe_heads=2,
-        num_cdmmoe_experts_per_head=4,
+        num_cdmmoe_heads=4,
+        num_cdmmoe_experts_per_head=8,
         **kwargs,
     ):
         self.vocab_size = vocab_size
