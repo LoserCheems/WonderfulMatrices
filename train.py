@@ -42,35 +42,32 @@ if __name__ == '__main__':
     # 加载模型
     # Load model
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
-    if args.resume_from_checkpoint:
-        model = DogeForCausalLM.from_pretrained(args.resume_from_checkpoint)
-    else:
-        config = DogeConfig(
-            vocab_size=hyperparameters['model']['vocab_size'],
-            hidden_size=hyperparameters['model']['hidden_size'],
-            intermediate_size=hyperparameters['model']['intermediate_size'],
-            num_hidden_layers=hyperparameters['model']['num_hidden_layers'],
-            hidden_bias=hyperparameters['model']['hidden_bias'],
-            hidden_dropout=hyperparameters['model']['hidden_dropout'],
-            hidden_act=hyperparameters['model']['hidden_act'],
-            max_position_embeddings=hyperparameters['model']['max_position_embeddings'],
-            rope_theta=hyperparameters['model']['rope_theta'],
-            use_cache=hyperparameters['model']['use_cache'],
-            pad_token_id=hyperparameters['model']['pad_token_id'],
-            bos_token_id=hyperparameters['model']['bos_token_id'],
-            eos_token_id=hyperparameters['model']['eos_token_id'],
-            num_attention_heads=hyperparameters['model']['num_attention_heads'],
-            num_inner_values=hyperparameters['model']['num_inner_values'],
-            num_inner_value_heads=hyperparameters['model']['num_inner_value_heads'],
-            num_value_per_head=hyperparameters['model']['num_value_per_head'],
-            inner_values_retrieval_size=hyperparameters['model']['inner_values_retrieval_size'],
-            private_expert_retrieval_size=hyperparameters['model']['private_expert_retrieval_size'],
-            num_cdmmoe_experts=hyperparameters['model']['num_cdmmoe_experts'],
-            num_cdmmoe_heads=hyperparameters['model']['num_cdmmoe_heads'],
-            num_cdmmoe_experts_per_head=hyperparameters['model']['num_cdmmoe_experts_per_head'],
-        )
-        config.vocab_size = tokenizer.vocab_size
-        model = DogeForCausalLM(config=config)
+    config = DogeConfig(
+        vocab_size=hyperparameters['model']['vocab_size'],
+        hidden_size=hyperparameters['model']['hidden_size'],
+        intermediate_size=hyperparameters['model']['intermediate_size'],
+        num_hidden_layers=hyperparameters['model']['num_hidden_layers'],
+        hidden_bias=hyperparameters['model']['hidden_bias'],
+        hidden_dropout=hyperparameters['model']['hidden_dropout'],
+        hidden_act=hyperparameters['model']['hidden_act'],
+        max_position_embeddings=hyperparameters['model']['max_position_embeddings'],
+        rope_theta=hyperparameters['model']['rope_theta'],
+        use_cache=hyperparameters['model']['use_cache'],
+        pad_token_id=hyperparameters['model']['pad_token_id'],
+        bos_token_id=hyperparameters['model']['bos_token_id'],
+        eos_token_id=hyperparameters['model']['eos_token_id'],
+        num_attention_heads=hyperparameters['model']['num_attention_heads'],
+        num_inner_values=hyperparameters['model']['num_inner_values'],
+        num_inner_value_heads=hyperparameters['model']['num_inner_value_heads'],
+        num_value_per_head=hyperparameters['model']['num_value_per_head'],
+        inner_values_retrieval_size=hyperparameters['model']['inner_values_retrieval_size'],
+        private_expert_retrieval_size=hyperparameters['model']['private_expert_retrieval_size'],
+        num_cdmmoe_experts=hyperparameters['model']['num_cdmmoe_experts'],
+        num_cdmmoe_heads=hyperparameters['model']['num_cdmmoe_heads'],
+        num_cdmmoe_experts_per_head=hyperparameters['model']['num_cdmmoe_experts_per_head'],
+    )
+    config.vocab_size = tokenizer.vocab_size
+    model = DogeForCausalLM(config=config)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(model)
