@@ -105,7 +105,11 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
         num_inner_values (`int`, *optional*, defaults to 8):
-            Number of inner values for each attention layer in the Transformer decoder.
+            Number of inner values for Inner Function Attention.
+        num_inner_value_heads (`int`, *optional*, defaults to 4):
+            Number of inner value heads for Inner Function Attention.
+        num_value_per_head (`int`, *optional*, defaults to 4):
+            Number of values per head, can't be greater than `num_inner_values`.
         inner_values_retrieval_size (`int`, *optional*, defaults to 128):
             Dimension of the inner values retrieval states for each attention layer in the Transformer decoder
         private_expert_retrieval_size (`int`, *optional*, defaults to 256):
@@ -142,6 +146,8 @@ class DogeConfig(PretrainedConfig):
         tie_word_embeddings=False,
         num_attention_heads=8,
         num_inner_values=8,
+        num_inner_value_heads=4,
+        num_value_per_head=4,
         inner_values_retrieval_size=128,
         private_expert_retrieval_size=256,
         num_cdmmoe_experts=4096,
@@ -168,6 +174,8 @@ class DogeConfig(PretrainedConfig):
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
         self.num_inner_values = num_inner_values
+        self.num_inner_value_heads = num_inner_value_heads
+        self.num_value_per_head = num_value_per_head
         self.inner_values_retrieval_size = inner_values_retrieval_size
         self.private_expert_retrieval_size = private_expert_retrieval_size
         self.num_cdmmoe_experts = num_cdmmoe_experts

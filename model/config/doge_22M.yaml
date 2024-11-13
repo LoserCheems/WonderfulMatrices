@@ -14,6 +14,8 @@ model:
   eos_token_id: 2
   num_attention_heads: 2
   num_inner_values: 2
+  num_inner_value_heads: 1
+  num_value_per_head: 1
   inner_values_retrieval_size: 128
   private_expert_retrieval_size: 256
   num_cdmmoe_experts: 1024

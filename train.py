@@ -13,7 +13,7 @@ from model.doge.modeling_doge import DogeForCausalLM
 if __name__ == '__main__':
     
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--config_path', type=str, default='./model/config/doge_180M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--config_path', type=str, default='./model/config/doge_22M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='logs')
     arg_parser.add_argument('--output_dir', type=str, default='results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./tokenizer', help='path to tokenizer')
@@ -61,6 +61,8 @@ if __name__ == '__main__':
             eos_token_id=hyperparameters['model']['eos_token_id'],
             num_attention_heads=hyperparameters['model']['num_attention_heads'],
             num_inner_values=hyperparameters['model']['num_inner_values'],
+            num_inner_value_heads=hyperparameters['model']['num_inner_value_heads'],
+            num_value_per_head=hyperparameters['model']['num_value_per_head'],
             inner_values_retrieval_size=hyperparameters['model']['inner_values_retrieval_size'],
             private_expert_retrieval_size=hyperparameters['model']['private_expert_retrieval_size'],
             num_cdmmoe_experts=hyperparameters['model']['num_cdmmoe_experts'],

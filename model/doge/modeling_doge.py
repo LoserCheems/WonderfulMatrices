@@ -193,6 +193,8 @@ class DogeInnerFuncAttn(nn.Module):
         # for accuracy of attention scores, we do not use GQA
         self.attention_head_dim = self.hidden_dim // self.num_attention_heads
         self.num_inner_values = config.num_inner_values
+        self.num_inner_value_heads = config.num_inner_value_heads
+        self.num_value_per_head = config.num_value_per_head
         self.inner_values_retrieval_dim = config.inner_values_retrieval_size
 
         # Q and K projections
@@ -215,13 +217,14 @@ class DogeInnerFuncAttn(nn.Module):
         # queries and keys for retrieval V
         self.v_queries = nn.Linear(
             self.hidden_dim,
-            self.inner_values_retrieval_dim,
+            self.num_inner_value_heads * self.inner_values_retrieval_dim,
             bias=config.hidden_bias,
         )
         self.v_keys = nn.Parameter(
             torch.zeros(
-                self.num_inner_values,
+                self.num_inner_value_heads,
                 self.inner_values_retrieval_dim,
+                self.num_inner_values,
             )
         )
 
@@ -347,10 +350,13 @@ class DogeInnerFuncAttn(nn.Module):
         """
         Each value can share weights with other values to increase the expressive power
         """
+        bsz, seq_len, _ = hidden_states.shape
+
         v_queries = self.v_queries(hidden_states)
-        sim = torch.matmul(v_queries, self.v_keys.transpose(-1, -2))
-        v_embed = self.v_embed(sim.topk(k=1, dim=-1).indices)
-        v = hidden_states * v_embed.sum(dim=-2)
+        v_queries = v_queries.view(bsz, seq_len, self.num_inner_value_heads, -1).transpose(1, 2)
+        sim = torch.matmul(v_queries, self.v_keys).transpose(1, 2)
+        v_embed = self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices)
+        v = hidden_states * v_embed.sum(dim=-2).sum(dim=-2)
         return v
 
     def forward(
@@ -470,7 +476,7 @@ class DogeCDMoE(nn.Module):
 
         # get similarity with queries and keys
         queries = self.queries(hidden_states)
-        queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
+        queries = queries.view(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
         # get expert scores and indices with the highest similarity
