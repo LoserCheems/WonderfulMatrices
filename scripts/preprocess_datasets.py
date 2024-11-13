@@ -42,13 +42,13 @@ if __name__ == '__main__':
     open_web_math_size = int(args.tokens * open_web_math_ratio // (args.max_length // 1000 * 1000))
 
 
-    # # 分词fineweb-edu
-    # # Tokenize fineweb-edu
-    # dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
-    # dataset = dataset.shuffle(seed=233)
-    # dataset = dataset.select(range(fineweb_edu_size + int((1000 * fineweb_edu_ratio)))).map(process_python_edu, input_columns=['text'], remove_columns=['text', 'id', 'metadata'], num_proc=args.num_proc)
-    # print(dataset)
-    # dataset.save_to_disk(args.save_dir + '/fineweb-edu_tokenized')
+    # 分词fineweb-edu
+    # Tokenize fineweb-edu
+    dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
+    dataset = dataset.shuffle(seed=233)
+    dataset = dataset.select(range(fineweb_edu_size + int((1000 * fineweb_edu_ratio)))).map(process_python_edu, input_columns=['text'], remove_columns=['text', 'id', 'metadata'], num_proc=args.num_proc)
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + '/fineweb-edu_tokenized')
 
     # 分词宇宙百科
     # Tokenize Cosmopedia
