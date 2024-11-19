@@ -112,6 +112,8 @@ class DogeConfig(PretrainedConfig):
             Number of values per head, can't be greater than `num_inner_values`.
         inner_values_retrieval_size (`int`, *optional*, defaults to 128):
             Dimension of the inner values retrieval states for each attention layer in the Transformer decoder
+        attention_dropout (`float`, *optional*, defaults to 0.0):
+            The dropout ratio for the attention probabilities.
         private_expert_retrieval_size (`int`, *optional*, defaults to 256):
             Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
@@ -149,6 +151,7 @@ class DogeConfig(PretrainedConfig):
         num_inner_value_heads=4,
         num_value_per_head=4,
         inner_values_retrieval_size=128,
+        attention_dropout=0.0,
         private_expert_retrieval_size=256,
         num_cdmmoe_experts=4096,
         num_cdmmoe_heads=4,
@@ -177,6 +180,7 @@ class DogeConfig(PretrainedConfig):
         self.num_inner_value_heads = num_inner_value_heads
         self.num_value_per_head = num_value_per_head
         self.inner_values_retrieval_size = inner_values_retrieval_size
+        self.attention_dropout = attention_dropout
         self.private_expert_retrieval_size = private_expert_retrieval_size
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
