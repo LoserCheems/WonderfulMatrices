@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team.    All rights reserved.
+# Copyright 2024 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on the Wonderful Matrices paper implementation.
 #
@@ -34,6 +34,14 @@ class DogeConfig(PretrainedConfig):
         vocab_size (`int`, *optional*, defaults to 32768):
             Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the
             `inputs_ids` passed when calling [`DogeModel`]
+        image_size (`List[int]`, *optional*, defaults to [540, 960]):
+            Image size of the Doge model. Defines the size of the input image that can be represented by the
+            `pixel_values` passed when calling [`DogeModel`]
+        patch_size (`int`, *optional*, defaults to 16):
+            Patch size of the Doge model. Defines the size of the patches that will be extracted from the input image
+            and processed by the model.
+        num_channels (`int`, *optional*, defaults to 3):
+            Number of channels in the input image.
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
         intermediate_size (`int`, *optional*, defaults to 4096):
@@ -105,22 +113,16 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
         num_inner_values (`int`, *optional*, defaults to 8):
-            Number of inner values for Inner Function Attention.
-        num_inner_value_heads (`int`, *optional*, defaults to 4):
-            Number of inner value heads for Inner Function Attention.
-        num_value_per_head (`int`, *optional*, defaults to 4):
-            Number of values per head, can't be greater than `num_inner_values`.
+            Number of inner values for each attention layer in the Transformer decoder.
         inner_values_retrieval_size (`int`, *optional*, defaults to 128):
             Dimension of the inner values retrieval states for each attention layer in the Transformer decoder
-        attention_dropout (`float`, *optional*, defaults to 0.0):
-            The dropout ratio for the attention probabilities.
         private_expert_retrieval_size (`int`, *optional*, defaults to 256):
             Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
             Number of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_heads (`int`, *optional*, defaults to 4):
+        num_cdmmoe_heads (`int`, *optional*, defaults to 2):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
+        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 4):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
     """
 
@@ -130,9 +132,14 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
-        hidden_size=1024,
-        intermediate_size=4096,
-        num_hidden_layers=16,
+        num_labels=9,
+        image_size=[512, 672],
+        patch_size=16,
+        num_channels=3,
+        num_detection_tokens=100,
+        hidden_size=256,
+        intermediate_size=1024,
+        num_hidden_layers=4,
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
@@ -148,17 +155,19 @@ class DogeConfig(PretrainedConfig):
         tie_word_embeddings=False,
         num_attention_heads=8,
         num_inner_values=8,
-        num_inner_value_heads=4,
-        num_value_per_head=4,
         inner_values_retrieval_size=128,
-        attention_dropout=0.0,
         private_expert_retrieval_size=256,
-        num_cdmmoe_experts=4096,
-        num_cdmmoe_heads=4,
-        num_cdmmoe_experts_per_head=8,
+        num_cdmmoe_experts=1024,
+        num_cdmmoe_heads=1,
+        num_cdmmoe_experts_per_head=2,
         **kwargs,
     ):
         self.vocab_size = vocab_size
+        self.num_labels = num_labels
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.num_channels = num_channels
+        self.num_detection_tokens = num_detection_tokens
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
@@ -177,10 +186,7 @@ class DogeConfig(PretrainedConfig):
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
         self.num_inner_values = num_inner_values
-        self.num_inner_value_heads = num_inner_value_heads
-        self.num_value_per_head = num_value_per_head
         self.inner_values_retrieval_size = inner_values_retrieval_size
-        self.attention_dropout = attention_dropout
         self.private_expert_retrieval_size = private_expert_retrieval_size
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
@@ -197,5 +203,6 @@ class DogeConfig(PretrainedConfig):
             bos_token_id=bos_token_id,
             eos_token_id=eos_token_id,
             tie_word_embeddings=tie_word_embeddings,
+            num_labels=num_labels,
             **kwargs,
         )

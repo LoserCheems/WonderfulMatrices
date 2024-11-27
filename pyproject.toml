@@ -1,0 +1,33 @@
+[project]
+name = "wonderful_matrices"
+description = "WonderFul Matrices Architecture For Doge Model"
+readme = "README.md"
+authors = [
+    { name = "Jingze Shi", email = "losercheems@gmail.com" }
+]
+requires-python = ">=3.9"
+dynamic = ["version"]
+license = { text = "Apache-2.0"}
+keywords = ["wonderful matrices", "doge model", "pytorch"]
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+dependencies = [
+    "torch",
+    "datasets",
+    "transformers",
+    "accelerate",
+    "trl",
+    "sentencepiece",
+    "einx",
+]
+urls = { name = "Repository", url = "https://github.com/LoserCheems/Doge"}
+
+[build-system]
+requires = [
+    "setuptools>=61.0.0",
+    "wheel",
+    "torch",
+    "packaging",
+]
+build-backend = "setuptools.build_meta"

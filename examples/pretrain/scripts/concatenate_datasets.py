@@ -1,7 +1,6 @@
 from datasets import concatenate_datasets, load_from_disk, Dataset
 from argparse import ArgumentParser
 
-
 if __name__ == '__main__':
 
     argparser = ArgumentParser()

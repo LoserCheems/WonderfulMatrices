@@ -1,0 +1,7 @@
+torch
+datasets
+transformers
+accelerate
+trl
+sentencepiece
+einx

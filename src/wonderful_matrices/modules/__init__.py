@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team.    All rights reserved.
+# Copyright 2024 Jingze Shi. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ from transformers.utils import (
 
 
 _import_structure = {
-    "configuration_doge": ["DogeConfig"],
 }
 
 
@@ -32,16 +31,15 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    _import_structure["modeling_doge"] = [
-        "DogeForCausalLM",
-        "DogeForSequenceClassification",
-        "DogeModel",
-        "DogePreTrainedModel",
+    _import_structure["innerfuncattn"] = [
+        "InnerFuncAttn",
+    ]
+    _import_structure["cdmoe"] = [
+        "CDMoE",
     ]
 
 
 if TYPE_CHECKING:
-    from .configuration_doge import DogeConfig
 
     try:
         if not is_torch_available():
@@ -49,12 +47,8 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_doge import (
-            DogeForCausalLM,
-            DogeForSequenceClassification,
-            DogeModel,
-            DogePreTrainedModel,
-        )
+        from .innerfuncattn import InnerFuncAttn
+        from .cdmoe import CDMoE
 
 
 else:

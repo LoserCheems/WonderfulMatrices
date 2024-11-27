@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team.    All rights reserved.
+# Copyright 2024 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on the Wonderful Matrices paper implementation.
 #
@@ -18,9 +18,8 @@
 # limitations under the License.
 """PyTorch Doge model."""
 
-from dataclasses import dataclass
 import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -31,7 +30,6 @@ from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.generation import GenerationMixin
 from transformers.modeling_outputs import (
-    ModelOutput,
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
@@ -45,7 +43,7 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from .configuration_doge_vision import DogeConfig
+from .configuration_doge import DogeConfig
 
 
 
@@ -191,21 +189,24 @@ class DogeInnerFuncAttn(nn.Module):
 
         self.hidden_dim = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
+        self.attention_dropout = config.attention_dropout
 
         # for accuracy of attention scores, we do not use GQA
         self.attention_head_dim = self.hidden_dim // self.num_attention_heads
         self.num_inner_values = config.num_inner_values
+        self.num_inner_value_heads = config.num_inner_value_heads
+        self.num_value_per_head = config.num_value_per_head
         self.inner_values_retrieval_dim = config.inner_values_retrieval_size
 
         # Q and K projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
-            self.attention_head_dim * self.num_attention_heads,
+            self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
         self.k_proj = nn.Linear(
             self.hidden_dim,
-            self.attention_head_dim * self.num_attention_heads,
+            self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
 
@@ -217,13 +218,14 @@ class DogeInnerFuncAttn(nn.Module):
         # queries and keys for retrieval V
         self.v_queries = nn.Linear(
             self.hidden_dim,
-            self.inner_values_retrieval_dim,
+            self.num_inner_value_heads * self.inner_values_retrieval_dim,
             bias=config.hidden_bias,
         )
         self.v_keys = nn.Parameter(
             torch.zeros(
-                self.num_inner_values,
+                self.num_inner_value_heads,
                 self.inner_values_retrieval_dim,
+                self.num_inner_values,
             )
         )
 
@@ -349,10 +351,14 @@ class DogeInnerFuncAttn(nn.Module):
         """
         Each value can share weights with other values to increase the expressive power
         """
+        bsz, seq_len, _ = hidden_states.shape
+
         v_queries = self.v_queries(hidden_states)
-        sim = torch.matmul(v_queries, self.v_keys.transpose(-1, -2))
-        v_embed = self.v_embed(sim.topk(k=1, dim=-1).indices)
-        v = hidden_states * v_embed.sum(dim=-2)
+        v_queries = v_queries.view(bsz, seq_len, self.num_inner_value_heads, -1).transpose(1, 2)
+        sim = torch.matmul(v_queries, self.v_keys)
+        v_embed = self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices)
+        # b h t k d -> b t d
+        v = hidden_states * v_embed.sum(dim=-2).sum(dim=-3)
         return v
 
     def forward(
@@ -365,19 +371,19 @@ class DogeInnerFuncAttn(nn.Module):
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Optional[Cache]]:
-        bsz, seq_len, _ = hidden_states.shape
+        bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.inner_func(hidden_states)
 
-        query_states = query_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
-        key_states = key_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
-        value_states = value_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
 
@@ -389,33 +395,90 @@ class DogeInnerFuncAttn(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
+        # compute attention scores matrix
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
+        # add mask to attention scores
         causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
-        # no matter the length, we just slice it
         causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
         attn_weights = attn_weights + causal_mask
 
-        # upcast attention to fp32
+        # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+
+        # apply attention scores to value states
         attn_output = torch.matmul(attn_weights, value_states)
 
-        if attn_output.size() != (
-            bsz,
-            self.num_attention_heads,
-            seq_len,
-            self.attention_head_dim,
-        ):
-            raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_attention_heads, seq_len, self.attention_head_dim)}, but is"
-                f" {attn_output.size()}"
-            )
-
         attn_output = attn_output.transpose(1, 2).contiguous()
-        attn_output = attn_output.reshape(bsz, seq_len, -1)
+        attn_output = attn_output.reshape(bsz, q_len, -1)
         attn_output = self.o_proj(attn_output)
 
         return attn_output, past_key_value
+
+
+class DogeSdpaInnerFuncAttn(DogeInnerFuncAttn):
+    """
+    Doge Inner Function Attention module using torch.nn.functional.scaled_dot_product_attention.
+    This module inherits from `DogeInnerFuncAttn` as the weights of the module stays untouched.
+    The only changes are on the forward pass to adapt to SDPA API.
+    """
+
+    # Adapted from LlamaAttention.forward
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_value: Optional[Cache] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        **kwargs,
+    ) -> Tuple[torch.Tensor, Optional[Cache]]:
+        bsz, q_len, _ = hidden_states.shape
+
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.inner_func(hidden_states)
+
+        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+
+        cos, sin = position_embeddings
+        query_states, query_states = apply_QK_rotary_pos_emb(query_states, query_states, cos, sin)
+
+        if past_key_value is not None:
+            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+
+        causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
+        causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
+
+        query_states = query_states.contiguous()
+        key_states = key_states.contiguous()
+        value_states = value_states.contiguous()
+
+        attn_output = F.scaled_dot_product_attention(
+            query_states,
+            key_states,
+            value_states,
+            attn_mask=causal_mask,
+            dropout_p=self.attention_dropout,
+        )
+
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.view(bsz, q_len, -1)
+        attn_output = self.o_proj(attn_output)
+
+        return attn_output, past_key_value
+
+
+DOGE_ATTENTION_CLASSES = {
+    "eager": DogeInnerFuncAttn,
+    "sdpa": DogeSdpaInnerFuncAttn,
+}
 
 
 class DogeCDMoE(nn.Module):
@@ -432,14 +495,13 @@ class DogeCDMoE(nn.Module):
         self.num_cdmmoe_heads = config.num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
 
-        # shared parameter up Linear
-        self.shared_up_proj = nn.Linear(
+        # cross domain
+        self.up_proj = nn.Linear(
             self.hidden_dim,
             self.intermediate_dim,
             bias=config.hidden_bias,
         )
-        # shared parameter down Linear
-        self.shared_down_proj = nn.Linear(
+        self.down_proj = nn.Linear(
             self.intermediate_dim,
             self.hidden_dim,
             bias=config.hidden_bias,
@@ -448,7 +510,7 @@ class DogeCDMoE(nn.Module):
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
             self.hidden_dim,
-            self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
+            self.num_cdmmoe_heads * self.private_expert_retrieval_dim,
             bias=False,
         )
         self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
@@ -479,11 +541,9 @@ class DogeCDMoE(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         bsz, seq_len, _ = hidden_states.shape
 
-        # queries
+        # get similarity with queries and keys
         queries = self.queries(hidden_states)
-        queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
-
-        # get similarity with keys
+        queries = queries.view(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
         # get expert scores and indices with the highest similarity
@@ -507,8 +567,9 @@ class DogeCDMoE(nn.Module):
         experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
-        # mix with shared parameters
-        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states))) + experts_states
+        # mix with shared parameters of cross domain
+        hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states)))
+        hidden_states = hidden_states + experts_states
         return hidden_states
 
 
@@ -518,7 +579,7 @@ class DogeDecoderLayer(nn.Module):
         self.hidden_dropout = config.hidden_dropout
 
         self.in_attn_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.attn = DogeInnerFuncAttn(config, layer_idx)
+        self.attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
         self.in_ff_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.feed_forward = DogeCDMoE(config)
 
@@ -598,6 +659,7 @@ class DogePreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["DogeDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
+    _supports_sdpa = True
     _supports_cache_class = True
     _supports_quantized_cache = True
     _supports_static_cache = True
@@ -697,6 +759,7 @@ class DogeModel(DogePreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
+        self.word_embed = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.rotary_emb = RotaryEmbedding(config)
         self.layers = nn.ModuleList(
             [DogeDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
@@ -707,9 +770,16 @@ class DogeModel(DogePreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+    def get_input_embeddings(self):
+        return self.word_embed
+
+    def set_input_embeddings(self, value):
+        self.word_embed = value
+
     @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
     def forward(
         self,
+        input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
         past_key_values: Optional[Union[Cache, List[torch.FloatTensor]]] = None,
@@ -727,11 +797,17 @@ class DogeModel(DogePreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        if (input_ids is None) ^ (inputs_embeds is not None):
+            raise ValueError("You cannot specify both input_ids and inputs_embeds")
+
         if self.gradient_checkpointing and self.training and use_cache:
             logger.warning_once(
                 "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
             )
             use_cache = False
+
+        if inputs_embeds is None:
+            inputs_embeds = self.word_embed(input_ids)
 
         # kept for BC (non `Cache` `past_key_values` inputs)
         return_legacy_cache = False
@@ -921,54 +997,12 @@ class DogeModel(DogePreTrainedModel):
     #     return causal_mask
 
 
-class DogePatchEmbedding(nn.Module):
-    """
-    This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
-    `hidden_states` of shape `(batch_size, 1, hidden_size)` to be consumed by a Transformer.
-    """
-
-    def __init__(self, config: DogeConfig):
-        super().__init__()
-        image_size, patch_size, num_channels = config.image_size, config.patch_size, config.num_channels
-
-        image_size = image_size if isinstance(image_size, list) else (image_size, image_size)
-        patch_size = patch_size if isinstance(patch_size, list) else (patch_size, patch_size)
-        num_patches = (image_size[0] // patch_size[0]) * (image_size[1] // patch_size[1])
-        self.image_size = image_size
-        self.patch_size = patch_size
-        self.num_channels = num_channels
-        self.num_patches = num_patches
-        self.hidden_size = config.hidden_size
-
-        self.proj = nn.Conv2d(num_channels, self.hidden_size, kernel_size=patch_size, stride=patch_size)
-
-    def forward(
-        self,
-        pixel_values: torch.Tensor,
-    ) -> torch.Tensor:
-        batch_size, num_channels, height, width = pixel_values.shape
-        if num_channels != self.num_channels:
-            raise ValueError(
-                f"Input image should have {self.num_channels} number of channels, but got {num_channels} instead."
-            )
-        
-        if height != self.image_size[0] or width != self.image_size[1]:
-            raise ValueError(
-                f"Input image should have size {self.image_size}, but got {height}*{width} instead."
-            )
-        
-        image_embedding = self.proj(pixel_values).flatten(2).transpose(1, 2)
-        return image_embedding
-
-
-class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
+class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: DogeConfig):
         super().__init__(config)
         self.config = config
-        self.word_embed = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.pixel_embed = DogePatchEmbedding(config)
         self.model = DogeModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -977,10 +1011,10 @@ class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
         self.post_init()
 
     def get_input_embeddings(self):
-        return self.word_embed
+        return self.model.word_embed
 
     def set_input_embeddings(self, value):
-        self.word_embed = value
+        self.model.word_embed = value
 
     def get_output_embeddings(self):
         return self.lm_head
@@ -999,7 +1033,6 @@ class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
     def forward(
         self,
         input_ids: torch.LongTensor = None,
-        pixel_values: torch.FloatTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
         past_key_values: Optional[torch.Tensor] = None,
@@ -1033,14 +1066,9 @@ class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if input_ids is not None:
-            inputs_embeds = self.word_embed(input_ids)
-        if pixel_values is not None:
-            pixel_embeds = self.pixel_embed(pixel_values)
-            inputs_embeds = torch.cat([inputs_embeds, pixel_embeds], dim=1)
-
         # decoder output consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.model(
+            input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
@@ -1074,155 +1102,111 @@ class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
         )
 
 
-@dataclass
-class DogeObjectDetectionOutputWithPast(ModelOutput):
-    loss: Optional[torch.FloatTensor] = None
-    loss_dict: Optional[Dict] = None
-    logits: torch.FloatTensor = None
-    pred_boxes: torch.FloatTensor = None
-    auxiliary_outputs: Optional[List[Dict]] = None
-    last_hidden_state: Optional[torch.FloatTensor] = None
-    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
-    attentions: Optional[Tuple[torch.FloatTensor]] = None
+@add_start_docstrings(
+    """
+    The Doge Model transformer with a sequence classification head on top (linear layer).
 
+    [`DogeForSequenceClassification`] uses the last token in order to do the classification, as other causal models
+    (e.g. GPT-2) do.
 
-class DogeForObjectDetection(DogePreTrainedModel):
+    Since it does classification on the last token, it requires to know the position of the last token. If a
+    `pad_token_id` is defined in the configuration, it finds the last token that is not a padding token in each row. If
+    no `pad_token_id` is defined, it simply takes the last value in each row of the batch. Since it cannot guess the
+    padding tokens when `inputs_embeds` are passed instead of `input_ids`, it does the same (take the last value in
+    each row of the batch).
+    """
+)
+class DogeForSequenceClassification(DogePreTrainedModel):
     def __init__(self, config: DogeConfig):
         super().__init__(config)
         self.config = config
-
-        # pixel embedding
-        self.pixel_embed = DogePatchEmbedding(config)
-
-        # model backbone
-        self.model = DogeModel(config)
         self.num_labels = config.num_labels
 
-        # classification head
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels + 1)
-
-        # detection head
-        self.detector = nn.Linear(config.hidden_size, 4)
+        self.model = DogeModel(config)
+        self.classifier = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
-        self.post_init()
-    
-    @torch.jit.unused
-    def _set_aux_loss(self, outputs_class, outputs_coord):
-        return [{"logits": a, "pred_boxes": b} for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
+        self.init_weights()
 
+    def get_input_embeddings(self):
+        return self.model.word_embed
+
+    def set_input_embeddings(self, value):
+        self.model.word_embed = value
+
+    @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
     def forward(
         self,
-        pixel_values: torch.FloatTensor,
+        input_ids: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[Union[Cache, List[torch.FloatTensor]]] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         labels: Optional[torch.LongTensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        **kwargs,
-    ) -> Union[Tuple, DogeObjectDetectionOutputWithPast]:
+    ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
-        labels (`List[Dict]` of len `(batch_size,)`, *optional*):
-            Labels for computing the bipartite matching loss. List of dicts, each dictionary containing at least the
-            following 2 keys: `'class_labels'` and `'boxes'` (the class labels and bounding boxes of an image in the
-            batch respectively). The class labels themselves should be a `torch.LongTensor` of len `(number of bounding
-            boxes in the image,)` and the boxes a `torch.FloatTensor` of shape `(number of bounding boxes in the image,
-            4)`.
-
-        Returns:
-
-        Examples:
-
-        ```python
-        >>> from transformers import AutoImageProcessor, AutoModelForObjectDetection
-        >>> import torch
-        >>> from PIL import Image
-        >>> import requests
-
-        >>> url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-        >>> image = Image.open(requests.get(url, stream=True).raw)
-
-        >>> image_processor = AutoImageProcessor.from_pretrained("hustvl/yolos-tiny")
-        >>> model = AutoModelForObjectDetection.from_pretrained("hustvl/yolos-tiny")
-
-        >>> inputs = image_processor(images=image, return_tensors="pt")
-        >>> outputs = model(**inputs)
-
-        >>> # convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-        >>> target_sizes = torch.tensor([image.size[::-1]])
-        >>> results = image_processor.post_process_object_detection(outputs, threshold=0.9, target_sizes=target_sizes)[
-        ...     0
-        ... ]
-
-        >>> for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
-        ...     box = [round(i, 2) for i in box.tolist()]
-        ...     print(
-        ...         f"Detected {model.config.id2label[label.item()]} with confidence "
-        ...         f"{round(score.item(), 3)} at location {box}"
-        ...     )
-        Detected remote with confidence 0.991 at location [46.48, 72.78, 178.98, 119.3]
-        Detected remote with confidence 0.908 at location [336.48, 79.27, 368.23, 192.36]
-        Detected cat with confidence 0.934 at location [337.18, 18.06, 638.14, 373.09]
-        Detected cat with confidence 0.979 at location [10.93, 53.74, 313.41, 470.67]
-        Detected remote with confidence 0.974 at location [41.63, 72.23, 178.09, 119.99]
-        ```"""
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
+        labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
+            Labels for computing the sequence classification/regression loss. Indices should be in `[0, ...,
+            config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
+            `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
+        """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if pixel_values is not None:
-            inputs_embeds = self.pixel_embed(pixel_values)
-        
         outputs = self.model(
+            input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
+            past_key_values=past_key_values,
             inputs_embeds=inputs_embeds,
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            **kwargs,
         )
-
         hidden_states = outputs[0]
-
-        # Take the final hidden states of the detection tokens
-        hidden_states = hidden_states[:, -self.config.num_detection_tokens:, :]
-
         logits = self.classifier(hidden_states)
-        pred_boxes = self.detector(hidden_states).sigmoid()
 
-        loss, loss_dict, auxiliary_outputs = None, None, None
-        if labels is not None:
-            outputs_class, outputs_coord = None, None
-            loss, loss_dict, auxiliary_outputs = self.loss_function(
-                logits, labels, self.device, pred_boxes, self.config, outputs_class, outputs_coord
-            )
-        
-        if not return_dict:
-            if auxiliary_outputs is not None:
-                output = (logits, pred_boxes) + auxiliary_outputs + outputs
+        if input_ids is not None:
+            batch_size = input_ids.shape[0]
+        else:
+            batch_size = inputs_embeds.shape[0]
+
+        if self.config.pad_token_id is None and batch_size != 1:
+            raise ValueError("Cannot handle batch sizes > 1 if no padding token is defined.")
+        if self.config.pad_token_id is None:
+            sequence_lengths = -1
+        else:
+            if input_ids is not None:
+                # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
+                sequence_lengths = torch.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
+                sequence_lengths = sequence_lengths % input_ids.shape[-1]
+                sequence_lengths = sequence_lengths.to(logits.device)
             else:
-                output = (logits, pred_boxes) + outputs
-            return ((loss, loss_dict) + output) if loss is not None else output
-    
-        return DogeObjectDetectionOutputWithPast(
+                sequence_lengths = -1
+
+        pooled_logits = logits[torch.arange(batch_size, device=logits.device), sequence_lengths]
+
+        loss = None
+        if labels is not None:
+            loss = self.loss_function(
+                logits=logits,
+                labels=labels,
+                pooled_logits=pooled_logits,
+                config=self.config,
+            )
+
+        if not return_dict:
+            output = (pooled_logits,) + outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return SequenceClassifierOutputWithPast(
             loss=loss,
-            loss_dict=loss_dict,
-            logits=logits,
-            pred_boxes=pred_boxes,
-            auxiliary_outputs=auxiliary_outputs,
-            last_hidden_state=outputs.last_hidden_state,
+            logits=pooled_logits,
+            past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-        
-
-
-
-

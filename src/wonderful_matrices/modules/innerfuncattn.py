@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi.    All rights reserved.
+# Copyright 2024 Jingze Shi. All rights reserved.
 #
 # This code is based on the Wonderful Matrices paper implementation.
 #
@@ -33,6 +33,8 @@ class InnerFuncAttn(nn.Module):
         d_model: int,
         n_heads: int,
         n_inner_values: int,
+        n_inner_value_heads: int,
+        n_inner_value_per_head: int,
         d_inner_values_retrieval: int,
         max_position_embeddings: int,
         layer_idx: Optional[int] = None
@@ -47,6 +49,8 @@ class InnerFuncAttn(nn.Module):
         # for accuracy of attention scores, we do not use GQA
         self.attention_head_dim = self.hidden_dim // self.num_attention_heads
         self.num_inner_values = n_inner_values
+        self.num_inner_value_heads = n_inner_value_heads
+        self.num_value_per_head = n_inner_value_per_head
         self.inner_values_retrieval_dim = d_inner_values_retrieval
 
         # Q and K projections
@@ -67,12 +71,13 @@ class InnerFuncAttn(nn.Module):
         # queries and keys for retrieval V
         self.v_queries = nn.Linear(
             self.hidden_dim,
-            self.inner_values_retrieval_dim,
+            self.num_inner_value_heads * self.inner_values_retrieval_dim,
         )
         self.v_keys = nn.Parameter(
             torch.zeros(
-                self.num_inner_values,
+                self.num_inner_value_heads,
                 self.inner_values_retrieval_dim,
+                self.num_inner_values,
             )
         )
 
@@ -95,9 +100,6 @@ class InnerFuncAttn(nn.Module):
         past_key_values: Cache = None,
         output_attentions: bool = False,
     ):
-        # for SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
-        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
-        # to infer the attention mask.
         past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
         using_static_cache = isinstance(past_key_values, StaticCache)
 
@@ -201,10 +203,14 @@ class InnerFuncAttn(nn.Module):
         """
         Each value can share weights with other values to increase the expressive power
         """
+        bsz, seq_len, _ = hidden_states.shape
+
         v_queries = self.v_queries(hidden_states)
-        sim = torch.matmul(v_queries, self.v_keys.transpose(-1, -2))
-        v_embed = self.v_embed(sim.topk(k=1, dim=-1).indices)
-        v = hidden_states * v_embed.sum(dim=-2)
+        v_queries = v_queries.view(bsz, seq_len, self.num_inner_value_heads, -1).transpose(1, 2)
+        sim = torch.matmul(v_queries, self.v_keys)
+        v_embed = self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices)
+        # b h t k d -> b t d
+        v = hidden_states * v_embed.sum(dim=-2).sum(dim=-3)
         return v
 
     def forward(
@@ -241,30 +247,22 @@ class InnerFuncAttn(nn.Module):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx)
 
+        # compute attention scores matrix
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
+        # add mask to attention scores
         causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
-        # no matter the length, we just slice it
         causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
         attn_weights = attn_weights + causal_mask
 
-        # upcast attention to fp32
+        # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+
+        # apply attention scores to value states
         attn_output = torch.matmul(attn_weights, value_states)
 
-        if attn_output.size() != (
-            bsz,
-            self.num_attention_heads,
-            seq_len,
-            self.attention_head_dim,
-        ):
-            raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_attention_heads, seq_len, self.attention_head_dim)}, but is"
-                f" {attn_output.size()}"
-            )
-
         attn_output = attn_output.transpose(1, 2).contiguous()
-        attn_output = attn_output.reshape(bsz, seq_len, self.hidden_size)
+        attn_output = attn_output.reshape(bsz, seq_len, -1)
         attn_output = self.o_proj(attn_output)
 
         return attn_output, past_key_value
