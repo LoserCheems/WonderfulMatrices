@@ -79,21 +79,26 @@ if __name__ == '__main__':
         logging_dir=logging_dir,
         logging_steps=hyperparameters['train']['logging_steps'],
         output_dir=output_dir,
+
         do_train=True,
         num_train_epochs=hyperparameters['train']['num_train_epochs'],
+        per_device_train_batch_size=hyperparameters['train']['per_device_train_batch_size'],
+
         do_eval=True,
         eval_strategy="steps",
         eval_steps=hyperparameters['train']['eval_steps'],
-        per_device_train_batch_size=hyperparameters['train']['per_device_train_batch_size'],
         per_device_eval_batch_size=hyperparameters['train']['per_device_eval_batch_size'],
-        weight_decay=hyperparameters['train']['weight_decay'],
+
         learning_rate=hyperparameters['train']['learning_rate'],
         warmup_ratio=hyperparameters['train']['warmup_ratio'],
         lr_scheduler_type="cosine_with_min_lr",
         lr_scheduler_kwargs={'min_lr_rate': hyperparameters['train']['min_lr_rate']},
+        weight_decay=hyperparameters['train']['weight_decay'],
+        
         save_safetensors=True,
         save_strategy="steps",
         save_steps=hyperparameters['train']['save_steps'],
+
         bf16=hyperparameters['train']['bf16'],
         max_grad_norm=hyperparameters['train']['max_grad_norm'],
         gradient_accumulation_steps=hyperparameters['train']['gradient_accumulation_steps'],
