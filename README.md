@@ -44,22 +44,29 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 - `pip install accelerate`: Used for distributed training.
 - `pip install einx`: Fast implementation dependency for the CDMoE module.
 
+## Installation
+
+```bash
+git clone https://github.com/LoserCheems/Doge.git
+cd Doge
+pip install -e .
+```
 
 ## Usage
 
-We have written a [notebook](./notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. Of course, you can also use some of the following modules independently.
+We have written a [notebook](./examples/notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. Of course, you can also use some of the following modules independently.
 
 ### Inner Function Attention
 
 The sequence transformation module of the Doge model.
 
-Source code: [model/modules/innerfuncattn.py](./model/modules/innerfuncattn.py)
+Source code: [innerfuncattn.py](./src/wonderful_matrices/modules/innerfuncattn.py)
 
 Usage:
 
 ```python
 import torch
-from model.modules.innerfuncattn import InnerFuncAttn
+from wonderful_matrices.modules.innerfuncattn import InnerFuncAttn
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
@@ -67,7 +74,9 @@ attention_mask = torch.ones(batch, seq_len)
 attn = InnerFuncAttn(
     d_model=dim,
     n_heads=1,
-    n_inner_values=1,
+    n_inner_values=16,
+    n_inner_value_heads=2,
+    n_inner_value_per_head=8,
     d_inner_values_retrieval=64,
     max_position_embeddings=seq_len,
     layer_idx=0,
@@ -80,13 +89,13 @@ print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 
 The state transformation module of the Doge model.
 
-Source code: [model/modules/cdmoe.py](./model/modules/cdmoe.py)
+Source code: [cdmoe.py](./src/wonderful_matrices/modules/cdmoe.py)
 
 Usage:
 
 ```python
 import torch
-from model.modules.cdmoe import CDMoE
+from wonderful_matrices.modules.cdmoe import CDMoE
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
