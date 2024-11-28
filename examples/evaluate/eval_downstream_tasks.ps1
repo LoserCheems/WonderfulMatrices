@@ -1,5 +1,5 @@
 
-$MODEL = "./results/Doge_Eval/197M/checkpoint-10000"
+$MODEL = "./results/Doge_Eval/197M/checkpoint-13400"
 $OUTPUT_DIR = "./lighteval_results"
 
 lighteval accelerate --override_batch_size 16 `
