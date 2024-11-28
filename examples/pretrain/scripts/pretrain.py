@@ -6,8 +6,8 @@ import yaml
 from datasets import load_from_disk
 from transformers import AutoTokenizer, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
-from model.doge.configuration_doge import DogeConfig
-from model.doge.modeling_doge import DogeForCausalLM
+from wonderful_matrices.doge.configuration_doge import DogeConfig
+from wonderful_matrices.doge.modeling_doge import DogeForCausalLM
 
 
 if __name__ == '__main__':

@@ -8,9 +8,14 @@ authors = [
 requires-python = ">=3.9"
 dynamic = ["version"]
 license = { text = "Apache-2.0"}
-keywords = ["wonderful matrices", "doge model", "pytorch"]
+keywords = ["wonderful matrices", "doge", "pytorch", "transformers", "trl"]
 classifiers = [
-    "Programming Language :: Python :: 3"
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "torch",

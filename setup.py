@@ -58,5 +58,5 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     python_requires='>=3.9',
     zip_safe=False,
-    keywords='wonderful_matrices, doge, transformers, trl, sentencepiece, einx',
+    keywords='wonderful_matrices, doge, pytorch, transformers, trl',
 )
