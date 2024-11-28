@@ -13,6 +13,10 @@ English | [简体中文](./README_zh.md)
 > Jingze Shi*, Bingheng Wu*, Lu He*, Luchang Jiang*\
 > Paper: [arXiv:2407.16958](https://arxiv.org/abs/2407.16958)
 
+![InnferFuncAttn](./assets/mqar.png)
+![CDMoE](./assets/erhe.png)
+
+
 ## About
 
 This project is a continuation of the discussion section of the [Wonderful Matrices](https://arxiv.org/abs/2407.16958) paper.

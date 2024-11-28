@@ -13,6 +13,11 @@
 > 石竞泽*, 吴冰珩*, 何鹭*, 姜路畅*\
 > 论文: [arXiv:2407.16958](https://arxiv.org/abs/2407.16958)
 
+
+![InnferFuncAttn](./assets/mqar.png)
+![CDMoE](./assets/erhe.png)
+
+
 ## 关于
 
 本项目是对 [Wonderful Matrices](https://arxiv.org/abs/2407.16958) 论文中, 讨论章节部分的延续研究.
@@ -47,19 +52,19 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 
 ## 使用
 
-我们编写了一个 [notebook](./notebook.ipynb)(仍然在更新中) 来展示 数据处理, 模型训练和模型评估的整个流程. 当然你也可以独立使用以下一些模块.
+我们编写了一个 [notebook](./examples/notebook.ipynb)(仍然在更新中) 来展示 数据处理, 模型训练和模型评估的整个流程. 当然你也可以独立使用以下一些模块.
 
 ### Inner Function Attention
 
 Doge 模型的序列变换模块.
 
-源代码: [model/modules/innerfuncattn.py](./model/modules/innerfuncattn.py)
+源代码: [innerfuncattn.py](./src/wonderful_matrices/modules/innerfuncattn.py)
 
 使用方法:
 
 ```python
 import torch
-from model.modules.innerfuncattn import InnerFuncAttn
+from wonderful_matrices.modules.innerfuncattn import InnerFuncAttn
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
@@ -67,7 +72,9 @@ attention_mask = torch.ones(batch, seq_len)
 attn = InnerFuncAttn(
     d_model=dim,
     n_heads=1,
-    n_inner_values=1,
+    n_inner_values=16,
+    n_inner_value_heads=2,
+    n_inner_value_per_head=8,
     d_inner_values_retrieval=64,
     max_position_embeddings=seq_len,
     layer_idx=0,
@@ -80,13 +87,13 @@ print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 
 Doge 模型的状态变换模块.
 
-源代码: [model/modules/cdmoe.py](./model/modules/cdmoe.py)
+源代码: [cdmoe.py](./src/wonderful_matrices/modules/cdmoe.py)
 
 使用方法:
 
 ```python
 import torch
-from model.modules.cdmoe import CDMoE
+from wonderful_matrices.modules.cdmoe import CDMoE
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
