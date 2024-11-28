@@ -17,7 +17,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('--logging_dir', type=str, default='logs')
     arg_parser.add_argument('--output_dir', type=str, default='results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./examples/tokenizer', help='path to tokenizer')
-    arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="path to checkpoint to resume training")
+    arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="./results/doge_197M/checkpoint-13800")
 
     args = arg_parser.parse_args()
 
