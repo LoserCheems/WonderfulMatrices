@@ -31,6 +31,9 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
+    _import_structure["ssd"] = [
+        "SSD",
+    ]
     _import_structure["innerfuncattn"] = [
         "InnerFuncAttn",
     ]
@@ -47,6 +50,7 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
+        from .ssd import SSD
         from .innerfuncattn import InnerFuncAttn
         from .cdmoe import CDMoE
 
