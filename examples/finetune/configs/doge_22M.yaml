@@ -1,35 +1,12 @@
-model:
-  vocab_size: 32768
-  hidden_size: 256
-  intermediate_size: 1024
-  num_hidden_layers: 4
-  hidden_bias: False
-  hidden_dropout: 0.0
-  hidden_act: "silu"
-  max_position_embeddings: 16384
-  rope_theta: 10000.0
-  use_cache: True
-  pad_token_id: 0
-  bos_token_id: 1
-  eos_token_id: 2
-  num_attention_heads: 2
-  num_inner_values: 2
-  num_inner_value_heads: 1
-  num_value_per_head: 1
-  inner_values_retrieval_size: 128
-  private_expert_retrieval_size: 256
-  num_cdmmoe_experts: 1024
-  num_cdmmoe_heads: 1
-  num_cdmmoe_experts_per_head: 2
-
-train:
-  dataset_path: "/workspace/Doge/datasets/pretrain_datasets"
+finetuning_args:
+  dataset_path: "/workspace/Doge/datasets/finetune_dataset"
   logging_steps: 100
   num_train_epochs: 1
   per_epoch_max_steps: 5000
   eval_steps: 100
   per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
+  dataset_num_proc: 8
   weight_decay: 0.01
   learning_rate: 0.0008
   warmup_ratio: 0.1
@@ -39,3 +16,5 @@ train:
   bf16: True
   max_grad_norm: 1.0
   gradient_accumulation_steps: 128
+  max_seq_length: 2048
+  packing: False

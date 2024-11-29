@@ -1,4 +1,4 @@
-model:
+model_config:
   vocab_size: 32768
   hidden_size: 768
   intermediate_size: 3072
@@ -22,8 +22,8 @@ model:
   num_cdmmoe_heads: 3
   num_cdmmoe_experts_per_head: 6
 
-train:
-  dataset_path: "/workspace/Doge/datasets/pretrain_datasets"
+training_args:
+  dataset_path: "/workspace/Doge/datasets/pretrain_dataset"
   logging_steps: 100
   num_train_epochs: 1
   per_epoch_max_steps: 20000
