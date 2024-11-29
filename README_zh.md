@@ -15,7 +15,7 @@
 
 
 ![InnferFuncAttn](./assets/mqar.png)
-![CDMoE](./assets/erhe.png)
+![CDMoE](./assets/erme.png)
 
 
 ## 关于

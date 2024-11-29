@@ -14,8 +14,7 @@ English | [简体中文](./README_zh.md)
 > Paper: [arXiv:2407.16958](https://arxiv.org/abs/2407.16958)
 
 ![InnferFuncAttn](./assets/mqar.png)
-![CDMoE](./assets/erhe.png)
-
+![CDMoE](./assets/erme.png)
 
 ## About
 
