@@ -23,6 +23,11 @@ import torch
 from torch import nn
 from transformers.activations import ACT2FN
 
+try:
+    from einx import add as einx_add
+except ImportError:
+    einx_add = None
+
 
 class CDMoE(nn.Module):
     """Cross-Domain Mixture of Experts from 'Wonderful Matrices' paper."""
@@ -100,10 +105,14 @@ class CDMoE(nn.Module):
 
         # get expert scores and indices with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
-        all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
-        all_scores = all_scores.view(*scores_x.shape[:-1], -1)
-        all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
-        all_indices = all_indices.view(*indices_x.shape[:-1], -1)
+        if einx_add is not None:
+            all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
+            all_indices = einx_add("... i, ... j -> ... (i j)", indices_x * self.num_keys, indices_y)
+        else:
+            all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
+            all_scores = all_scores.view(*scores_x.shape[:-1], -1)
+            all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
+            all_indices = all_indices.view(*indices_x.shape[:-1], -1)
         scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
 
