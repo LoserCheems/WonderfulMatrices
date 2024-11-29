@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-76M', help='pretrained model name or path')
-    arg_parser.add_argument('--config_path', type=str, default='./examples/pretrain/configs/doge_197M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/doge_76M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='logs')
     arg_parser.add_argument('--output_dir', type=str, default='results')
     arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="resume from checkpoint")
@@ -34,8 +34,9 @@ if __name__ == "__main__":
 
     # 加载数据集
     # Load dataset
-    dataset = load_from_disk(hyperparameters['training_args']['dataset_path'])
-    dataset["train"] = dataset["train"].select(range(hyperparameters['training_args']['per_epoch_max_steps'] * hyperparameters['training_args']['per_device_train_batch_size'] * hyperparameters['training_args']['gradient_accumulation_steps']))
+    dataset = load_from_disk(hyperparameters['finetuning_args']['dataset_path'])
+    if hyperparameters['finetuning_args']['per_epoch_max_steps'] != -1:
+        dataset["train"] = dataset["train"].select(range(hyperparameters['finetuning_args']['per_epoch_max_steps'] * hyperparameters['finetuning_args']['per_device_train_batch_size'] * hyperparameters['finetuning_args']['gradient_accumulation_steps']))
 
     # 加载模型
     # Load model
@@ -51,34 +52,34 @@ if __name__ == "__main__":
     sft_config = SFTConfig(
         seed=233,
         logging_dir=logging_dir,
-        logging_steps=hyperparameters['training_args']['logging_steps'],
+        logging_steps=hyperparameters['finetuning_args']['logging_steps'],
         output_dir=output_dir,
 
         do_train=True,
-        num_train_epochs=hyperparameters['training_args']['num_train_epochs'],
-        per_device_train_batch_size=hyperparameters['training_args']['per_device_train_batch_size'],
+        num_train_epochs=hyperparameters['finetuning_args']['num_train_epochs'],
+        per_device_train_batch_size=hyperparameters['finetuning_args']['per_device_train_batch_size'],
         
         do_eval=True,
         eval_strategy="steps",
-        eval_steps=hyperparameters['training_args']['eval_steps'],
-        per_device_eval_batch_size=hyperparameters['training_args']['per_device_eval_batch_size'],
-        dataset_num_proc=hyperparameters['training_args']['dataset_num_proc'],
+        eval_steps=hyperparameters['finetuning_args']['eval_steps'],
+        per_device_eval_batch_size=hyperparameters['finetuning_args']['per_device_eval_batch_size'],
+        dataset_num_proc=hyperparameters['finetuning_args']['dataset_num_proc'],
         
-        learning_rate=hyperparameters['training_args']['learning_rate'],
-        warmup_ratio=hyperparameters['training_args']['warmup_ratio'],
+        learning_rate=hyperparameters['finetuning_args']['learning_rate'],
+        warmup_ratio=hyperparameters['finetuning_args']['warmup_ratio'],
         lr_scheduler_type="cosine_with_min_lr",
-        lr_scheduler_kwargs={'min_lr_rate': hyperparameters['training_args']['min_lr_rate']},
-        weight_decay=hyperparameters['training_args']['weight_decay'],
+        lr_scheduler_kwargs={'min_lr_rate': hyperparameters['finetuning_args']['min_lr_rate']},
+        weight_decay=hyperparameters['finetuning_args']['weight_decay'],
 
         save_safetensors=True,
         save_strategy="steps",
-        save_steps=hyperparameters['training_args']['save_steps'],
+        save_steps=hyperparameters['finetuning_args']['save_steps'],
 
-        bf16=hyperparameters['training_args']['bf16'],
-        max_grad_norm=hyperparameters['training_args']['max_grad_norm'],
-        gradient_accumulation_steps=hyperparameters['training_args']['gradient_accumulation_steps'],
-        max_seq_length=hyperparameters['training_args']['max_seq_length'],
-        packing=hyperparameters['training_args']['packing'],
+        bf16=hyperparameters['finetuning_args']['bf16'],
+        max_grad_norm=hyperparameters['finetuning_args']['max_grad_norm'],
+        gradient_accumulation_steps=hyperparameters['finetuning_args']['gradient_accumulation_steps'],
+        max_seq_length=hyperparameters['finetuning_args']['max_seq_length'],
+        packing=hyperparameters['finetuning_args']['packing'],
     )
 
     trainer = SFTTrainer(
