@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-setup.py
-src/wonderful_matrices.egg-info/PKG-INFO
-src/wonderful_matrices.egg-info/SOURCES.txt
-src/wonderful_matrices.egg-info/dependency_links.txt
-src/wonderful_matrices.egg-info/not-zip-safe
-src/wonderful_matrices.egg-info/requires.txt
-src/wonderful_matrices.egg-info/top_level.txt
