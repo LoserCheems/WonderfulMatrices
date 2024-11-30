@@ -16,9 +16,9 @@ DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
 # 上传到hub
 # Push to hub
 doge = DogeForCausalLM.from_pretrained("./results/doge_197M/checkpoint-13400")
-# doge.push_to_hub("JingzeShi/Doge-76M")
+# doge.push_to_hub("JingzeShi/Doge-197M")
 doge.save_pretrained("./results/Doge_Eval/197M/checkpoint-13400")
 
 tokenizer = AutoTokenizer.from_pretrained("./examples/tokenizer")
-# tokenizer.push_to_hub("JingzeShi/Doge-76M")
+# tokenizer.push_to_hub("JingzeShi/Doge-197M")
 tokenizer.save_pretrained("./results/Doge_Eval/197M/checkpoint-13400")
