@@ -14,6 +14,12 @@ You can download the datasets using the following command:
 python ./examples/finetune/scripts/download_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
 ```
 
+Then preprocess the datasets using the following command:
+
+```bash
+python ./examples/finetune/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path ./examples/tokenizer --num_proc 8
+```
+
 ## Training
 
 We train the Doge-22M-Instruct on 1 GPU using the following command:

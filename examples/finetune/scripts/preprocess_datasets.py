@@ -39,5 +39,3 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     main(args)
-    
-
