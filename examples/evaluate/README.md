@@ -12,8 +12,7 @@ pip install lighteval
 
 ## Evaluation
 
-如果你是Linux用户, 你可以使用以下命令来评估模型:
-en: If you are a Linux user, you can use the following command to evaluate the model:
+If you are a Linux user, you can use the following command to evaluate the model:
 
 ```bash
 bash ./examples/evaluate/eval_downstream_tasks.sh
