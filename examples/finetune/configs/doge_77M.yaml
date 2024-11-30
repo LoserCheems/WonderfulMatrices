@@ -1,5 +1,6 @@
 finetuning_args:
-  dataset_path: "./datasets/smoltalk"
+  seed: 233
+  dataset_path: "/workspace/Doge/datasets/finetune_dataset"
   logging_steps: 100
   num_train_epochs: 1
   per_epoch_max_steps: -1
@@ -17,4 +18,4 @@ finetuning_args:
   max_grad_norm: 1.0
   gradient_accumulation_steps: 128
   max_seq_length: 2048
-  packing: False
+  packing: True
