@@ -23,6 +23,7 @@ model_config:
   num_cdmmoe_experts_per_head: 2
 
 training_args:
+  seed: 233
   dataset_path: "/workspace/Doge/datasets/pretrain_dataset"
   logging_steps: 100
   num_train_epochs: 1
