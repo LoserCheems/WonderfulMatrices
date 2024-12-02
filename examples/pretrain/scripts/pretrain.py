@@ -6,10 +6,10 @@ from argparse import ArgumentParser
 import yaml
 import datasets
 import transformers
-from transformers import AutoTokenizer, TrainingArguments, Trainer, DataCollatorForLanguageModeling
+from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
 from wonderful_matrices.doge.configuration_doge import DogeConfig
-from wonderful_matrices.doge.modeling_doge import DogeForCausalLM
+from wonderful_matrices.doge.modeling_doge import DogeModel, DogeForCausalLM
 
 
 logger = logging.getLogger(__name__)
@@ -122,8 +122,8 @@ def main(args):
 
         # 评估策略与评估步数
         # Evaluation strategy and evaluation steps
-        do_eval=True,
-        eval_strategy="steps",
+        do_eval=hyperparameters['training_args']['do_eval'],
+        eval_strategy="steps" if hyperparameters['training_args']['do_eval'] else "no",
         eval_steps=hyperparameters['training_args']['eval_steps'],
         per_device_eval_batch_size=hyperparameters['training_args']['per_device_eval_batch_size'],
 
@@ -159,7 +159,7 @@ def main(args):
         model=model,
         args=training_args,
         train_dataset=dataset['train'],
-        eval_dataset=dataset['test'],
+        eval_dataset=dataset['test'] if hyperparameters['training_args']['do_eval'] else None,
         processing_class=tokenizer,
         data_collator=data_collator,
     )
@@ -204,12 +204,28 @@ def main(args):
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
         logger.info("*** Evaluation finished! ***")
+    
+    ################################
+    # 注册模型并保存
+    # Register the model and save
+    ################################
+    AutoConfig.register("doge", DogeConfig)
+    AutoModel.register(DogeConfig, DogeModel)
+    AutoModelForCausalLM.register(DogeConfig, DogeForCausalLM)
+    DogeConfig.register_for_auto_class()
+    DogeModel.register_for_auto_class("AutoModel")
+    DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
+    tokenizer = AutoTokenizer.from_pretrained(f'{output_dir}')
+    model = AutoModelForCausalLM.from_pretrained(f'{output_dir}')
+    tokenizer.save_pretrained(f'{output_dir}-registered')
+    model.save_pretrained(f'{output_dir}-registered')
+    logger.info(f"Model registered and saved to {output_dir}-registered")
 
 
 if __name__ == '__main__':
     
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--config_path', type=str, default='./examples/pretrain/configs/doge_197M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--config_path', type=str, default='./examples/pretrain/configs/Doge-197M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='./logs')
     arg_parser.add_argument('--output_dir', type=str, default='./results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./examples/tokenizer', help='path to tokenizer')
