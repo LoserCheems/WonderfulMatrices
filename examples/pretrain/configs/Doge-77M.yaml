@@ -28,13 +28,14 @@ training_args:
   logging_steps: 100
   num_train_epochs: 1
   per_epoch_max_steps: 10000
-  eval_steps: 100
   per_device_train_batch_size: 1
+  do_eval: True
+  eval_steps: 100
   per_device_eval_batch_size: 1
-  weight_decay: 0.01
   learning_rate: 0.0006
   warmup_ratio: 0.1
   min_lr_rate: 0.1
+  weight_decay: 0.01
   save_safetensors: True
   save_steps: 100
   bf16: True
