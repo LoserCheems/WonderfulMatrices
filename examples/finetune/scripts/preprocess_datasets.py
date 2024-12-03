@@ -25,6 +25,7 @@ def main(args):
         },
         num_proc=args.num_proc,
         remove_columns=columns,
+        batched=True,
         desc="Applying chat template"
     )
     print(dataset)
