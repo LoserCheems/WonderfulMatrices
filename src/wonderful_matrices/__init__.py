@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 Jingze Shi. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,10 +40,28 @@ else:
         "DogeModel",
         "DogePreTrainedModel",
     ]
+    _import_structure["ssd"] = [
+        "SSD",
+    ]
+    _import_structure["innerfuncattn"] = [
+        "InnerFuncAttn",
+    ]
+    _import_structure["cdmoe"] = [
+        "CDMoE",
+    ]
+    _import_structure["peer"] = [
+        "PEER",
+    ]
+    _import_structure["seimoe"] = [
+        "SEIMoE",
+    ]
+    _import_structure["mlp"] = [
+        "MLP",
+        "GatedMLP",
+    ]
 
 
 if TYPE_CHECKING:
-    from .configuration_doge import DogeConfig
 
     try:
         if not is_torch_available():
@@ -51,12 +69,19 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .modeling_doge import (
+        from .doge.configuration_doge import DogeConfig
+        from .doge.modeling_doge import (
             DogeForCausalLM,
             DogeForSequenceClassification,
             DogeModel,
             DogePreTrainedModel,
         )
+        from .modules.ssd import SSD
+        from .modules.innerfuncattn import InnerFuncAttn
+        from .modules.cdmoe import CDMoE
+        from .modules.peer import PEER
+        from .modules.seimoe import SEIMoE
+        from .modules.mlp import MLP, GatedMLP
 
 
 else:

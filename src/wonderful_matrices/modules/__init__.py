@@ -40,6 +40,16 @@ else:
     _import_structure["cdmoe"] = [
         "CDMoE",
     ]
+    _import_structure["peer"] = [
+        "PEER",
+    ]
+    _import_structure["seimoe"] = [
+        "SEIMoE",
+    ]
+    _import_structure["mlp"] = [
+        "MLP",
+        "GatedMLP",
+    ]
 
 
 if TYPE_CHECKING:
@@ -53,6 +63,9 @@ if TYPE_CHECKING:
         from .ssd import SSD
         from .innerfuncattn import InnerFuncAttn
         from .cdmoe import CDMoE
+        from .peer import PEER
+        from .seimoe import SEIMoE
+        from .mlp import MLP, GatedMLP
 
 
 else:
