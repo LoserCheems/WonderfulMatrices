@@ -3,9 +3,25 @@ from datasets import load_from_disk
 from argparse import ArgumentParser
 
 
+
+# 这些处理函数选自SFTTrainer的实现, 虽然不知道不知道他们为什么不对截断后的token进行处理.
+# These processing functions are selected from the implementation of SFTTrainer, although I don't know why they don't process the truncated tokens.
+
 def process_fineweb_edu(example, tokenizer, max_length=2048):
     text = example['text']
-    return tokenizer(text, padding='max_length', truncation=True, max_length=max_length)
+    outputs = tokenizer(
+        text,
+        add_special_tokens=True,
+        truncation=True,
+        padding=False,
+        max_length=max_length,
+        return_overflowing_tokens=False,
+        return_length=False,
+    )
+    return {
+        'input_ids': outputs['input_ids'],
+        'attention_mask': outputs['attention_mask'],
+    }
 
 def process_cosmopedia(example, tokenizer, max_length=2048):
     prompt = example['prompt']
@@ -14,32 +30,69 @@ def process_cosmopedia(example, tokenizer, max_length=2048):
         {"role": "user", "content": prompt},
         {"role": "assistant", "content": text},
     ]
-    return tokenizer.apply_chat_template(
+    outputs = tokenizer.apply_chat_template(
         conversation, 
         tokenize=True, 
-        padding='max_length', 
         truncation=True, 
-        max_length=max_length, 
+        padding=False, 
+        max_length=max_length,
+        return_overflowing_tokens=False,
+        return_length=False,
         return_dict=True
     )
+    return {
+        'input_ids': outputs['input_ids'],
+        'attention_mask': outputs['attention_mask'],
+    }
 
 def process_python_edu(example, tokenizer, max_length=2048):
     text = example['text']
-    return tokenizer(text, padding='max_length', truncation=True, max_length=max_length)
+    outputs = tokenizer(
+        text,
+        add_special_tokens=True,
+        truncation=True,
+        padding=False,
+        max_length=max_length,
+        return_overflowing_tokens=False,
+        return_length=False,
+    )
+    return {
+        'input_ids': outputs['input_ids'],
+        'attention_mask': outputs['attention_mask'],
+    }
 
 def process_open_web_math(example, tokenizer, max_length=2048):
     text = example['text']
-    return tokenizer(text, padding='max_length', truncation=True, max_length=max_length)
+    outputs = tokenizer(
+        text,
+        add_special_tokens=True,
+        truncation=True,
+        padding=False,
+        max_length=max_length,
+        return_overflowing_tokens=False,
+        return_length=False,
+    )
+    return {
+        'input_ids': outputs['input_ids'],
+        'attention_mask': outputs['attention_mask'],
+    }
 
 def main(args):
 
     # 计算fineweb-edu, cosmopedia-v2, python-edu, open-web-math的大小
     # Calculate the size of fineweb-edu, cosmopedia-v2, python-edu, open-web-math
     fineweb_edu_ratio, cosmopedia_v2_ratio, python_edu_ratio, open_web_math_ratio = 0.7, 0.2, 0.05, 0.05
-    fineweb_edu_size = int(args.tokens * fineweb_edu_ratio // (args.max_length // 1000 * 1000))
-    cosmopedia_v2_size = int(args.tokens * cosmopedia_v2_ratio // (args.max_length // 1000 * 1000))
-    python_edu_size = int(args.tokens * python_edu_ratio // (args.max_length // 1000 * 1000))
-    open_web_math_size = int(args.tokens * open_web_math_ratio // (args.max_length // 1000 * 1000))
+
+    fineweb_edu_train_size = int(args.train_examples * fineweb_edu_ratio)
+    cosmopedia_v2_train_size = int(args.train_examples * cosmopedia_v2_ratio)
+    python_edu_train_size = int(args.train_examples * python_edu_ratio)
+    open_web_math_train_size = int(args.train_examples * open_web_math_ratio)
+
+    fineweb_edu_test_size = int(args.test_examples * fineweb_edu_ratio)
+    cosmopedia_v2_test_size = int(args.test_examples * cosmopedia_v2_ratio)
+    python_edu_test_size = int(args.test_examples * python_edu_ratio)
+    open_web_math_test_size = int(args.test_examples * open_web_math_ratio)
+
 
     # 加载分词器
     # Load tokenizer
@@ -49,9 +102,8 @@ def main(args):
     # Process fineweb-edu
     dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233)
-    dataset = dataset.select(
-        range(fineweb_edu_size + int((1000 * fineweb_edu_ratio)))
+    dataset = dataset.shuffle(seed=233).select(
+        range(fineweb_edu_train_size + fineweb_edu_test_size)
     ).map(
         process_fineweb_edu, 
         fn_kwargs={
@@ -60,6 +112,7 @@ def main(args):
         },
         num_proc=args.num_proc,
         remove_columns=column_names,
+        batched=True,
         desc="Processing fineweb-edu"
     )
     print(dataset)
@@ -69,9 +122,9 @@ def main(args):
     # Process Cosmopedia-v2
     dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233)
-    dataset = dataset.select(
-        range(cosmopedia_v2_size + int((1000 * cosmopedia_v2_ratio)))
+
+    dataset = dataset.shuffle(seed=233).select(
+        range(cosmopedia_v2_train_size + cosmopedia_v2_test_size)
     ).map(
         process_cosmopedia, 
         fn_kwargs={
@@ -80,6 +133,7 @@ def main(args):
         },
         num_proc=args.num_proc,
         remove_columns=column_names,
+        batched=True,
         desc="Processing cosmopedia-v2"
     )
     print(dataset)
@@ -89,9 +143,8 @@ def main(args):
     # Process Python Education
     dataset = load_from_disk(args.datasets_dir + '/python-edu')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233)
-    dataset = dataset.select(
-        range(python_edu_size + int((1000 * python_edu_ratio)))
+    dataset = dataset.shuffle(seed=233).select(
+        range(python_edu_train_size + python_edu_test_size)
     ).map(
         process_python_edu, 
         fn_kwargs={
@@ -100,6 +153,7 @@ def main(args):
         },
         num_proc=args.num_proc,
         remove_columns=column_names,
+        batched=True,
         desc="Processing python-edu"
     )
     print(dataset)
@@ -109,9 +163,8 @@ def main(args):
     # Process Open Web Math
     dataset = load_from_disk(args.datasets_dir + '/open-web-math')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233)
-    dataset = dataset.select(
-        range(open_web_math_size + int((1000 * open_web_math_ratio)))
+    dataset = dataset.shuffle(seed=233).select(
+        range(open_web_math_train_size + open_web_math_test_size)
     ).map(
         process_open_web_math, 
         fn_kwargs={
@@ -120,6 +173,7 @@ def main(args):
         },
         num_proc=args.num_proc,
         remove_columns=column_names,
+        batched=True,
         desc="Processing open-web-math"
     )
     print(dataset)
@@ -130,9 +184,10 @@ if __name__ == '__main__':
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
     argparser.add_argument("--tokenizer_path", type=str, default="./examples/tokenizer")
-    argparser.add_argument("--tokens", type=int, default=100_000_000_000)
+    argparser.add_argument("--train_examples", type=int, default=100_000_000_000)
+    argparser.add_argument("--test_examples", type=int, default=1_000)
     argparser.add_argument("--max_length", type=int, default=2048)
-    argparser.add_argument("--num_proc", type=int, default=8)
+    argparser.add_argument("--num_proc", type=int, default=1)
     args = argparser.parse_args()
 
     main(args)
