@@ -17,13 +17,15 @@ python ./examples/pretrain/scripts/download_datasets.py --save_dir ./datasets --
 You can preprocess the datasets using the following command:
 
 ```bash
-python ./examples/pretrain/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path ./examples/tokenizer --tokens 100000000000 --max_length 2048 --num_proc 16
+python ./examples/pretrain/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path ./examples/tokenizer --train_examples 100000000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
+
+>NOTE: Due to the large size of the complete dataset, we only provide a small dataset for demonstration. You can control the size of the dataset by modifying the `--train_examples` and `--test_examples` parameters.
 
 You can concatenate all the sub-datasets using the following command:
 
 ```bash
-python ./examples/pretrain/scripts/concatenate_datasets.py --datasets_dir ./datasets --save_dir ./datasets --num_proc 16
+python ./examples/pretrain/scripts/concatenate_datasets.py --datasets_dir ./datasets --save_dir ./datasets --train_examples 100000000000 --test_examples 1000 --num_proc 16
 ```
 
 ## Training
