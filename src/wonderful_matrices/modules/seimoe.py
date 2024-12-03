@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .mlp import GatedMLP
+from .mlp import MLP, GatedMLP
 
 class SEIMoE(nn.Module):
 
@@ -21,10 +21,10 @@ class SEIMoE(nn.Module):
 
         self.router = nn.Linear(self.hidden_size, self.num_experts, bias=False)
         self.experts = nn.ModuleList(
-            [GatedMLP(self.hidden_size, act_fn, self.intermediate_size) for _ in range(self.num_experts)]
+            [MLP(self.hidden_size, act_fn, self.intermediate_size) for _ in range(self.num_experts)]
         )
 
-        self.shared_expert = GatedMLP(self.hidden_size, act_fn, self.intermediate_size)
+        self.shared_expert = MLP(self.hidden_size, act_fn, self.intermediate_size)
         self.shared_expert_gate = nn.Linear(self.hidden_size, 1, bias=False)
     
     def forward(
