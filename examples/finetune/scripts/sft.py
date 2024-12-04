@@ -205,8 +205,8 @@ def main(args):
 if __name__ == "__main__":
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-76M', help='pretrained model name or path')
-    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-77M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-197M', help='pretrained model name or path')
+    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-197M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='./logs')
     arg_parser.add_argument('--output_dir', type=str, default='./results')
     arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="path to checkpoint to resume training")
