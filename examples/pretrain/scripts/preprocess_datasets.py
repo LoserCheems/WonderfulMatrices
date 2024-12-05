@@ -3,10 +3,6 @@ from datasets import load_from_disk
 from argparse import ArgumentParser
 
 
-
-# 这些处理函数选自SFTTrainer的实现, 虽然不知道不知道他们为什么不对截断后的token进行处理.
-# These processing functions are selected from the implementation of SFTTrainer, although I don't know why they don't process the truncated tokens.
-
 def process_fineweb_edu(example, tokenizer, max_length=2048):
     text = example['text']
     outputs = tokenizer(
@@ -133,7 +129,6 @@ def main(args):
         },
         num_proc=args.num_proc,
         remove_columns=column_names,
-        batched=True,
         desc="Processing cosmopedia-v2"
     )
     print(dataset)
@@ -184,7 +179,7 @@ if __name__ == '__main__':
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
     argparser.add_argument("--tokenizer_path", type=str, default="./examples/tokenizer")
-    argparser.add_argument("--train_examples", type=int, default=100_000_000_000)
+    argparser.add_argument("--train_examples", type=int, default=160_000_000)
     argparser.add_argument("--test_examples", type=int, default=1_000)
     argparser.add_argument("--max_length", type=int, default=2048)
     argparser.add_argument("--num_proc", type=int, default=1)
