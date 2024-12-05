@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2024 Jingze Shi, Bingheng Wu and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on the Wonderful Matrices paper implementation.
 #
@@ -16,7 +16,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Doge model."""
+"""PyTorch Doge Vision model."""
 
 from dataclasses import dataclass
 import math
@@ -47,10 +47,10 @@ from transformers.utils import (
 )
 from .configuration_doge_vision import DogeConfig
 
-
-
-from einx import add as einx_add
-
+try:
+    from einx import add as einx_add
+except ImportError:
+    einx_add = None
 
 
 logger = logging.get_logger(__name__)
@@ -191,12 +191,15 @@ class DogeInnerFuncAttn(nn.Module):
 
         self.hidden_dim = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
+        self.attention_dropout = config.attention_dropout
 
         # for accuracy of attention scores, we do not use GQA
         self.attention_head_dim = self.hidden_dim // self.num_attention_heads
         self.num_inner_values = config.num_inner_values
+        self.num_inner_value_heads = config.num_inner_value_heads
+        self.num_value_per_head = config.num_value_per_head
         self.inner_values_retrieval_dim = config.inner_values_retrieval_size
-
+        
         # Q and K projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
@@ -217,13 +220,14 @@ class DogeInnerFuncAttn(nn.Module):
         # queries and keys for retrieval V
         self.v_queries = nn.Linear(
             self.hidden_dim,
-            self.inner_values_retrieval_dim,
+            self.num_inner_value_heads * self.inner_values_retrieval_dim,
             bias=config.hidden_bias,
         )
         self.v_keys = nn.Parameter(
             torch.zeros(
-                self.num_inner_values,
+                self.num_inner_value_heads,
                 self.inner_values_retrieval_dim,
+                self.num_inner_values,
             )
         )
 
@@ -349,11 +353,16 @@ class DogeInnerFuncAttn(nn.Module):
         """
         Each value can share weights with other values to increase the expressive power
         """
+        bsz, seq_len, _ = hidden_states.shape
+
         v_queries = self.v_queries(hidden_states)
-        sim = torch.matmul(v_queries, self.v_keys.transpose(-1, -2))
-        v_embed = self.v_embed(sim.topk(k=1, dim=-1).indices)
-        v = hidden_states * v_embed.sum(dim=-2)
+        v_queries = v_queries.view(bsz, seq_len, self.num_inner_value_heads, -1).transpose(1, 2)
+        sim = torch.matmul(v_queries, self.v_keys)
+        v_embed = self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices)
+        # b h t k d -> b t d
+        v = hidden_states * v_embed.sum(dim=-2).sum(dim=-3)
         return v
+
 
     def forward(
         self,
@@ -365,19 +374,19 @@ class DogeInnerFuncAttn(nn.Module):
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Optional[Cache]]:
-        bsz, seq_len, _ = hidden_states.shape
+        bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.inner_func(hidden_states)
 
-        query_states = query_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
-        key_states = key_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
-        value_states = value_states.view(bsz, seq_len, self.num_attention_heads, self.attention_head_dim).transpose(
+        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
         )
 
@@ -389,33 +398,90 @@ class DogeInnerFuncAttn(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
+        # compute attention scores matrix
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
+        # add mask to attention scores
         causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
-        # no matter the length, we just slice it
         causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
         attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+       
+        # apply attention scores to value states
         attn_output = torch.matmul(attn_weights, value_states)
 
-        if attn_output.size() != (
-            bsz,
-            self.num_attention_heads,
-            seq_len,
-            self.attention_head_dim,
-        ):
-            raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_attention_heads, seq_len, self.attention_head_dim)}, but is"
-                f" {attn_output.size()}"
-            )
-
         attn_output = attn_output.transpose(1, 2).contiguous()
-        attn_output = attn_output.reshape(bsz, seq_len, -1)
+        attn_output = attn_output.reshape(bsz, q_len, -1)
         attn_output = self.o_proj(attn_output)
 
         return attn_output, past_key_value
+
+
+class DogeSdpaInnerFuncAttn(DogeInnerFuncAttn):
+    """
+    Doge Inner Function Attention module using torch.nn.functional.scaled_dot_product_attention.
+    This module inherits from `DogeInnerFuncAttn` as the weights of the module stays untouched.
+    The only changes are on the forward pass to adapt to SDPA API.
+    """
+
+    # Adapted from LlamaAttention.forward
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_value: Optional[Cache] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        **kwargs,
+    ) -> Tuple[torch.Tensor, Optional[Cache]]:
+        bsz, q_len, _ = hidden_states.shape
+
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.inner_func(hidden_states)
+
+        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+
+        cos, sin = position_embeddings
+        query_states, query_states = apply_QK_rotary_pos_emb(query_states, query_states, cos, sin)
+
+        if past_key_value is not None:
+            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+
+        causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
+        causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
+
+        query_states = query_states.contiguous()
+        key_states = key_states.contiguous()
+        value_states = value_states.contiguous()
+
+        attn_output = F.scaled_dot_product_attention(
+            query_states,
+            key_states,
+            value_states,
+            attn_mask=causal_mask,
+            dropout_p=self.attention_dropout,
+        )
+
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.view(bsz, q_len, -1)
+        attn_output = self.o_proj(attn_output)
+
+        return attn_output, past_key_value
+
+
+DOGE_ATTENTION_CLASSES = {
+    "eager": DogeInnerFuncAttn,
+    "sdpa": DogeSdpaInnerFuncAttn,
+}
 
 
 class DogeCDMoE(nn.Module):
@@ -432,14 +498,13 @@ class DogeCDMoE(nn.Module):
         self.num_cdmmoe_heads = config.num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
 
-        # shared parameter up Linear
-        self.shared_up_proj = nn.Linear(
+        # cross domain
+        self.up_proj = nn.Linear(
             self.hidden_dim,
             self.intermediate_dim,
             bias=config.hidden_bias,
         )
-        # shared parameter down Linear
-        self.shared_down_proj = nn.Linear(
+        self.down_proj = nn.Linear(
             self.intermediate_dim,
             self.hidden_dim,
             bias=config.hidden_bias,
@@ -448,7 +513,7 @@ class DogeCDMoE(nn.Module):
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
             self.hidden_dim,
-            self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
+            self.num_cdmmoe_heads * self.private_expert_retrieval_dim,
             bias=False,
         )
         self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
@@ -462,7 +527,7 @@ class DogeCDMoE(nn.Module):
         )
 
         # private experts
-        self.down_embed = nn.Embedding(
+        self.down_embed  = nn.Embedding(
             self.num_cdmmoe_experts,
             self.hidden_dim,
         )
@@ -476,14 +541,12 @@ class DogeCDMoE(nn.Module):
         self,
         hidden_states: torch.Tensor,
         **kwargs,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
         bsz, seq_len, _ = hidden_states.shape
 
-        # queries
+        # get similarity with queries and keys
         queries = self.queries(hidden_states)
-        queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
-
-        # get similarity with keys
+        queries = queries.view(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
         # get expert scores and indices with the highest similarity
@@ -507,8 +570,9 @@ class DogeCDMoE(nn.Module):
         experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
-        # mix with shared parameters
-        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states))) + experts_states
+        # mix with shared parameters of cross domain
+        hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states)))
+        hidden_states = hidden_states + experts_states
         return hidden_states
 
 
@@ -518,7 +582,7 @@ class DogeDecoderLayer(nn.Module):
         self.hidden_dropout = config.hidden_dropout
 
         self.in_attn_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.attn = DogeInnerFuncAttn(config, layer_idx)
+        self.attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
         self.in_ff_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.feed_forward = DogeCDMoE(config)
 
@@ -598,6 +662,7 @@ class DogePreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["DogeDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
+    _supports_sdpa = True
     _supports_cache_class = True
     _supports_quantized_cache = True
     _supports_static_cache = True
