@@ -179,7 +179,7 @@ if __name__ == '__main__':
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
     argparser.add_argument("--tokenizer_path", type=str, default="./examples/tokenizer")
-    argparser.add_argument("--train_examples", type=int, default=80_000_000)
+    argparser.add_argument("--train_examples", type=int, default=81_920_000)
     argparser.add_argument("--test_examples", type=int, default=1_000)
     argparser.add_argument("--max_length", type=int, default=2048)
     argparser.add_argument("--num_proc", type=int, default=1)

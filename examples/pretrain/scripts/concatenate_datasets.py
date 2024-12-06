@@ -30,7 +30,7 @@ if __name__ == '__main__':
     argparser = ArgumentParser()
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
-    argparser.add_argument("--train_examples", type=int, default=100_000_000_000)
+    argparser.add_argument("--train_examples", type=int, default=81_920_000)
     argparser.add_argument("--test_examples", type=int, default=1_000)
     argparser.add_argument("--num_proc", type=int, default=8)
     args = argparser.parse_args()
