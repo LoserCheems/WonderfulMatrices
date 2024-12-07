@@ -35,7 +35,7 @@ We train the Doge-22M on 1 GPU using the following command:
 > Note: You can modify the configuration file to implement multi-GPU training, etc.
 
 ```bash
-python ./examples/pretrain/scripts/pretrain.py --config_path ./examples/pretrain/configs/doge_22M.yaml --logging_dir ./logs --output_dir ./results --tokenizer_path ./examples/tokenizer --resume_from_checkpoint <path_to_checkpoint>
+python ./examples/pretrain/scripts/pretrain.py --config_path ./examples/pretrain/configs/Doge-22M.yaml --logging_dir ./logs --output_dir ./results --tokenizer_path ./examples/tokenizer --resume_from_checkpoint <path_to_checkpoint>
 ```
 
 and so on.
