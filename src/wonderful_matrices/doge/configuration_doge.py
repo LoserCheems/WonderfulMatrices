@@ -104,24 +104,16 @@ class DogeConfig(PretrainedConfig):
             Whether to tie weight embeddings
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
-        num_inner_values (`int`, *optional*, defaults to 8):
-            Number of inner values for Inner Function Attention.
-        num_inner_value_heads (`int`, *optional*, defaults to 4):
-            Number of inner value heads for Inner Function Attention.
-        num_value_per_head (`int`, *optional*, defaults to 4):
-            Number of values per head, can't be greater than `num_inner_values`.
-        inner_values_retrieval_size (`int`, *optional*, defaults to 128):
-            Dimension of the inner values retrieval states for each attention layer in the Transformer decoder
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
-        private_expert_retrieval_size (`int`, *optional*, defaults to 256):
-            Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
             Number of Private Experts for the Cross Domain Mixture of Experts.
         num_cdmmoe_heads (`int`, *optional*, defaults to 4):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
+        private_expert_retrieval_size (`int`, *optional*, defaults to 256):
+            Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
     """
 
     model_type = "doge"
@@ -147,15 +139,11 @@ class DogeConfig(PretrainedConfig):
         eos_token_id=2,
         tie_word_embeddings=False,
         num_attention_heads=8,
-        num_inner_values=8,
-        num_inner_value_heads=4,
-        num_value_per_head=4,
-        inner_values_retrieval_size=128,
         attention_dropout=0.0,
-        private_expert_retrieval_size=256,
         num_cdmmoe_experts=4096,
         num_cdmmoe_heads=4,
         num_cdmmoe_experts_per_head=8,
+        private_expert_retrieval_size=256,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -176,15 +164,11 @@ class DogeConfig(PretrainedConfig):
         self.eos_token_id = eos_token_id
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
-        self.num_inner_values = num_inner_values
-        self.num_inner_value_heads = num_inner_value_heads
-        self.num_value_per_head = num_value_per_head
-        self.inner_values_retrieval_size = inner_values_retrieval_size
         self.attention_dropout = attention_dropout
-        self.private_expert_retrieval_size = private_expert_retrieval_size
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head
+        self.private_expert_retrieval_size = private_expert_retrieval_size
 
         # Validate the correctness of rotary position embeddings parameters
         # BC: if there is a 'type' field, copy it it to 'rope_type'.
