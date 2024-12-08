@@ -198,7 +198,7 @@ class DogeInnerFuncAttn(nn.Module):
         self.num_value_per_head = config.num_value_per_head
         self.inner_values_retrieval_dim = config.inner_values_retrieval_size
 
-        # Q and K projections
+        # Q K V projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
             self.num_attention_heads * self.attention_head_dim,
@@ -209,13 +209,18 @@ class DogeInnerFuncAttn(nn.Module):
             self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
+        self.v_proj = nn.Linear(
+            self.hidden_dim,
+            self.num_attention_heads * self.attention_head_dim,
+            bias=config.hidden_bias,
+        )
 
         # dynamic mask for the QK^T attention score matrix
         self.dynamic_mask = nn.Parameter(
             torch.round(torch.ones(self.num_attention_heads, config.max_position_embeddings))
         )
 
-        # queries and keys for retrieval V
+        # queries and keys for retrieval V to compute inner function
         self.v_queries = nn.Linear(
             self.hidden_dim,
             self.num_inner_value_heads * self.inner_values_retrieval_dim,
@@ -228,8 +233,6 @@ class DogeInnerFuncAttn(nn.Module):
                 self.num_inner_values,
             )
         )
-
-        # V for inner function
         self.v_embed = nn.Embedding(
             self.num_inner_values,
             self.hidden_dim,
@@ -349,17 +352,15 @@ class DogeInnerFuncAttn(nn.Module):
         hidden_states: torch.Tensor,
     ) -> torch.Tensor:
         """
-        Each value can share weights with other values to increase the expressive power
+        Compute the inner function for expanding the value states.
         """
         bsz, seq_len, _ = hidden_states.shape
 
         v_queries = self.v_queries(hidden_states)
         v_queries = v_queries.view(bsz, seq_len, self.num_inner_value_heads, -1).transpose(1, 2)
         sim = torch.matmul(v_queries, self.v_keys)
-        v_embed = self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices)
-        # b h t k d -> b t d
-        v = hidden_states * v_embed.sum(dim=-2).sum(dim=-3)
-        return v
+        v_states = self.v_proj(hidden_states) + self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices).sum(dim=-2).sum(dim=-3)
+        return v_states
 
     def forward(
         self,
