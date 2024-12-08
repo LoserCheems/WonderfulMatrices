@@ -526,8 +526,8 @@ class DogeCDMoE(nn.Module):
         up_embed = self.up_embed(indices)
 
         # efficient private experts retrieval
-        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed))
-        experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights * scores.softmax(dim=-1), up_embed)
+        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)) * scores.softmax(dim=-1)
+        experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
         # mix private experts states with cross domain states
         hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states)))
