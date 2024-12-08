@@ -172,7 +172,7 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class DogeInnerFuncAttn(nn.Module):
+class DogeDynamicMaskAttn(nn.Module):
     """Inner Function Attention from 'Wonderful Matrices' paper."""
 
     def __init__(self, config: DogeConfig, layer_idx: Optional[int] = None):
@@ -190,13 +190,7 @@ class DogeInnerFuncAttn(nn.Module):
         self.hidden_dim = config.hidden_size
         self.num_attention_heads = config.num_attention_heads
         self.attention_dropout = config.attention_dropout
-
-        # for accuracy of attention scores, we do not use GQA
         self.attention_head_dim = self.hidden_dim // self.num_attention_heads
-        self.num_inner_values = config.num_inner_values
-        self.num_inner_value_heads = config.num_inner_value_heads
-        self.num_value_per_head = config.num_value_per_head
-        self.inner_values_retrieval_dim = config.inner_values_retrieval_size
 
         # Q K V projections
         self.q_proj = nn.Linear(
@@ -218,24 +212,6 @@ class DogeInnerFuncAttn(nn.Module):
         # dynamic mask for the QK^T attention score matrix
         self.dynamic_mask = nn.Parameter(
             torch.round(torch.ones(self.num_attention_heads, config.max_position_embeddings))
-        )
-
-        # queries and keys for retrieval V to compute inner function
-        self.v_queries = nn.Linear(
-            self.hidden_dim,
-            self.num_inner_value_heads * self.inner_values_retrieval_dim,
-            bias=config.hidden_bias,
-        )
-        self.v_keys = nn.Parameter(
-            torch.zeros(
-                self.num_inner_value_heads,
-                self.inner_values_retrieval_dim,
-                self.num_inner_values,
-            )
-        )
-        self.v_embed = nn.Embedding(
-            self.num_inner_values,
-            self.hidden_dim,
         )
 
         self.o_proj = nn.Linear(
@@ -347,21 +323,6 @@ class DogeInnerFuncAttn(nn.Module):
 
         return causal_mask
 
-    def inner_func(
-        self,
-        hidden_states: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Compute the inner function for expanding the value states.
-        """
-        bsz, seq_len, _ = hidden_states.shape
-
-        v_queries = self.v_queries(hidden_states)
-        v_queries = v_queries.view(bsz, seq_len, self.num_inner_value_heads, -1).transpose(1, 2)
-        sim = torch.matmul(v_queries, self.v_keys)
-        v_states = self.v_proj(hidden_states) + self.v_embed(sim.topk(k=self.num_value_per_head, dim=-1).indices).sum(dim=-2).sum(dim=-3)
-        return v_states
-
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -376,7 +337,7 @@ class DogeInnerFuncAttn(nn.Module):
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
-        value_states = self.inner_func(hidden_states)
+        value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
             1, 2
@@ -418,7 +379,7 @@ class DogeInnerFuncAttn(nn.Module):
         return attn_output, past_key_value
 
 
-class DogeSdpaInnerFuncAttn(DogeInnerFuncAttn):
+class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
     """
     Doge Inner Function Attention module using torch.nn.functional.scaled_dot_product_attention.
     This module inherits from `DogeInnerFuncAttn` as the weights of the module stays untouched.
@@ -440,7 +401,7 @@ class DogeSdpaInnerFuncAttn(DogeInnerFuncAttn):
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
-        value_states = self.inner_func(hidden_states)
+        value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
         key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
@@ -477,8 +438,8 @@ class DogeSdpaInnerFuncAttn(DogeInnerFuncAttn):
 
 
 DOGE_ATTENTION_CLASSES = {
-    "eager": DogeInnerFuncAttn,
-    "sdpa": DogeSdpaInnerFuncAttn,
+    "eager": DogeDynamicMaskAttn,
+    "sdpa": DogeSdpaDynamicMaskAttn,
 }
 
 
@@ -514,11 +475,10 @@ class DogeCDMoE(nn.Module):
             self.num_cdmmoe_heads * self.private_expert_retrieval_dim,
             bias=False,
         )
-        self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
         self.keys = nn.Parameter(
             torch.zeros(
                 self.num_cdmmoe_heads,
-                self.num_keys,
+                self.num_cdmmoe_experts,
                 2,
                 self.private_expert_retrieval_dim // 2,
             )
@@ -551,24 +511,24 @@ class DogeCDMoE(nn.Module):
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         if einx_add is not None:
             all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
-            all_indices = einx_add("... i, ... j -> ... (i j)", indices_x * self.num_keys, indices_y)
+            all_indices = einx_add("... i, ... j -> ... (i j)", indices_x * self.num_cdmmoe_experts, indices_y)
         else:
             all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
             all_scores = all_scores.view(*scores_x.shape[:-1], -1)
-            all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
+            all_indices = (indices_x.unsqueeze(-1) * self.num_cdmmoe_experts) + indices_y.unsqueeze(-2)
             all_indices = all_indices.view(*indices_x.shape[:-1], -1)
         scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
 
-        # get related expert embeddings based on indices
+        # get related expert embeddings
         down_embed = self.down_embed(indices)
         up_embed = self.up_embed(indices)
 
-        # efficient retrieval of private experts
-        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
+        # efficient private experts retrieval
+        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)) * scores.softmax(dim=-1)
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
-        # mix with shared parameters of cross domain
+        # mix private experts states with cross domain states
         hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states)))
         hidden_states = hidden_states + experts_states
         return hidden_states
