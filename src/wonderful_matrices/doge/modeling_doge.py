@@ -203,7 +203,7 @@ class DogeDynamicMaskAttn(nn.Module):
         self.attention_dropout = config.attention_dropout
         self.attention_head_dim = self.hidden_dim // self.num_attention_heads
 
-        # Q K V projections
+        # Q K V O projections
         self.q_proj = nn.Linear(
             self.hidden_dim,
             self.num_attention_heads * self.attention_head_dim,
@@ -214,17 +214,20 @@ class DogeDynamicMaskAttn(nn.Module):
             self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
+        # dynamic mask for the QK^T attention score matrix
+        self.A_log = nn.Parameter(
+            torch.log(torch.arange(1, self.num_attention_heads + 1))
+        )
+        self.dt_proj = nn.Linear(
+            self.hidden_dim,
+            self.num_attention_heads,
+            bias=config.hidden_bias,
+        )
         self.v_proj = nn.Linear(
             self.hidden_dim,
             self.num_attention_heads * self.attention_head_dim,
             bias=config.hidden_bias,
         )
-
-        # dynamic mask for the QK^T attention score matrix
-        self.dynamic_mask = nn.Parameter(
-            torch.round(torch.ones(self.num_attention_heads, config.max_position_embeddings))
-        )
-
         self.o_proj = nn.Linear(
             self.hidden_dim,
             self.hidden_dim,
@@ -234,6 +237,7 @@ class DogeDynamicMaskAttn(nn.Module):
     def _update_causal_mask(
         self,
         attention_mask: torch.Tensor = None,
+        dynamic_mask: torch.Tensor = None,
         input_tensor: torch.Tensor = None,
         cache_position: torch.Tensor = None,
         past_key_values: Cache = None,
@@ -256,7 +260,7 @@ class DogeDynamicMaskAttn(nn.Module):
         # in case the provided `attention` mask is 2D, we generate a causal mask here (4D).
         causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
             attention_mask=attention_mask,
-            dynamic_mask=self.dynamic_mask,
+            dynamic_mask=dynamic_mask,
             sequence_length=sequence_length,
             target_length=target_length,
             dtype=dtype,
@@ -288,7 +292,7 @@ class DogeDynamicMaskAttn(nn.Module):
                 A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape
                 `(batch_size, 1, query_length, key_value_length)`.
             dynamic_mask (`torch.Tensor`):
-                A 2D dynamic mask of shape `(num_heads, max_position_embeddings)`.
+                A 3D dynamic mask of shape `(batch_size, num_heads, key_value_length)`.
             sequence_length (`int`):
                 The sequence length being processed.
             target_length (`int`):
@@ -307,7 +311,7 @@ class DogeDynamicMaskAttn(nn.Module):
             # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
             causal_mask = attention_mask
         else:
-            num_heads = 1 if dynamic_mask is None else dynamic_mask.size(0)
+            num_heads = 1 if dynamic_mask is None else dynamic_mask.size(1)
             min_dtype = torch.finfo(dtype).min
             causal_mask = torch.full(
                 (sequence_length, target_length),
@@ -324,7 +328,7 @@ class DogeDynamicMaskAttn(nn.Module):
                 mask_length = attention_mask.shape[-1]
                 attention_mask = attention_mask[:, None, None, :].expand(-1, num_heads, 1, -1)
                 if dynamic_mask is not None and mask_length < dynamic_mask.shape[-1]:
-                    dynamic_mask = dynamic_mask[None, :, None, :mask_length].expand(batch_size, -1, 1, -1)
+                    dynamic_mask = dynamic_mask[:, :, None, :].expand(-1, -1, 1, -1)
                     attention_mask = attention_mask.clone() * dynamic_mask
 
                 padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask
@@ -348,6 +352,7 @@ class DogeDynamicMaskAttn(nn.Module):
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
+        dt_states = self.dt_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
@@ -372,7 +377,9 @@ class DogeDynamicMaskAttn(nn.Module):
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
         # add mask to attention scores
-        causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
+        dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
+        dynamic_mask = dynamic_mask.transpose(-1, -2)
+        causal_mask = self._update_causal_mask(attention_mask, dynamic_mask, hidden_states, cache_position, past_key_value)
         causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
         attn_weights = attn_weights + causal_mask
 
@@ -406,6 +413,7 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
+        dt_states = self.dt_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
@@ -420,7 +428,9 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        causal_mask = self._update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
+        dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
+        dynamic_mask = dynamic_mask.transpose(-1, -2)
+        causal_mask = self._update_causal_mask(attention_mask, dynamic_mask, hidden_states, cache_position, past_key_value)
         causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
 
         query_states = query_states.contiguous()
