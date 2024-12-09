@@ -13,14 +13,11 @@ model_config:
   bos_token_id: 1
   eos_token_id: 2
   num_attention_heads: 6
-  num_inner_values: 6
-  num_inner_value_heads: 3
-  num_value_per_head: 3
-  inner_values_retrieval_size: 128
-  private_expert_retrieval_size: 256
+  is_moe: True
   num_cdmmoe_experts: 3072
-  num_cdmmoe_heads: 3
-  num_cdmmoe_experts_per_head: 6
+  num_cdmmoe_heads: 6
+  num_cdmmoe_experts_per_head: 12
+  private_expert_retrieval_size: 256
 
 training_args:
   seed: 233

@@ -1,8 +1,8 @@
 model_config:
   vocab_size: 32768
-  hidden_size: 512
-  intermediate_size: 2048
-  num_hidden_layers: 8
+  hidden_size: 1024
+  intermediate_size: 4096
+  num_hidden_layers: 16
   hidden_bias: False
   hidden_dropout: 0.0
   hidden_act: "silu"
@@ -12,27 +12,24 @@ model_config:
   pad_token_id: 0
   bos_token_id: 1
   eos_token_id: 2
-  num_attention_heads: 4
-  num_inner_values: 512
-  num_inner_value_heads: 4
-  num_value_per_head: 8
-  inner_values_retrieval_size: 128
+  num_attention_heads: 8
+  is_moe: True
+  num_cdmmoe_experts: 4096
+  num_cdmmoe_heads: 8
+  num_cdmmoe_experts_per_head: 16
   private_expert_retrieval_size: 256
-  num_cdmmoe_experts: 2048
-  num_cdmmoe_heads: 4
-  num_cdmmoe_experts_per_head: 8
 
 training_args:
   seed: 233
   dataset_path: "/workspace/Doge/datasets/pretrain_dataset"
   logging_steps: 100
   num_train_epochs: 2
-  per_epoch_max_steps: 20000
+  per_epoch_max_steps: 80000
   per_device_train_batch_size: 1
   do_eval: True
   eval_steps: 100
   per_device_eval_batch_size: 1
-  learning_rate: 0.0006
+  learning_rate: 0.0004
   warmup_ratio: 0.1
   min_lr_rate: 0.1
   weight_decay: 0.01
@@ -40,4 +37,4 @@ training_args:
   save_steps: 100
   bf16: True
   max_grad_norm: 1.0
-  gradient_accumulation_steps: 256
+  gradient_accumulation_steps: 1024

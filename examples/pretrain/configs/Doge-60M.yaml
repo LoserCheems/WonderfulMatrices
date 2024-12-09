@@ -1,0 +1,35 @@
+model_config:
+  vocab_size: 32768
+  hidden_size: 512
+  intermediate_size: 2048
+  num_hidden_layers: 8
+  hidden_bias: False
+  hidden_dropout: 0.0
+  hidden_act: "silu"
+  max_position_embeddings: 16384
+  rope_theta: 10000.0
+  use_cache: True
+  pad_token_id: 0
+  bos_token_id: 1
+  eos_token_id: 2
+  num_attention_heads: 4
+
+training_args:
+  seed: 233
+  dataset_path: "/workspace/Doge/datasets/pretrain_dataset"
+  logging_steps: 100
+  num_train_epochs: 2
+  per_epoch_max_steps: 20000
+  per_device_train_batch_size: 1
+  do_eval: True
+  eval_steps: 100
+  per_device_eval_batch_size: 1
+  learning_rate: 0.0006
+  warmup_ratio: 0.1
+  min_lr_rate: 0.1
+  weight_decay: 0.01
+  save_safetensors: True
+  save_steps: 100
+  bf16: True
+  max_grad_norm: 1.0
+  gradient_accumulation_steps: 256
