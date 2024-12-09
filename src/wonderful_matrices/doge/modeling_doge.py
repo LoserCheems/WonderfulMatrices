@@ -215,8 +215,8 @@ class DogeDynamicMaskAttn(nn.Module):
             bias=config.hidden_bias,
         )
         # dynamic mask for the QK^T attention score matrix
-        self.A_log = nn.Parameter(
-            torch.log(torch.arange(1, self.num_attention_heads + 1))
+        self.A = nn.Parameter(
+            torch.ones(self.num_attention_heads)
         )
         self.dt_proj = nn.Linear(
             self.hidden_dim,
@@ -274,10 +274,10 @@ class DogeDynamicMaskAttn(nn.Module):
 
         # add mask to attention scores
         if attention_mask is not None:
-            dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
+            dynamic_mask = torch.exp(self.A * dt_states)
             dynamic_mask = dynamic_mask.transpose(-1, -2)
             dynamic_mask = dynamic_mask[:, :, None, :]
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] - dynamic_mask
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] + dynamic_mask
             attn_weights = attn_weights + causal_mask
 
         # upcast attention scores to fp32
@@ -326,10 +326,10 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         if attention_mask is not None:
-            dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
+            dynamic_mask = torch.exp(self.A * dt_states)
             dynamic_mask = dynamic_mask.transpose(-1, -2)
             dynamic_mask = dynamic_mask[:, :, None, :]
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] - dynamic_mask
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] + dynamic_mask
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
