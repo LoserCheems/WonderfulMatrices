@@ -277,8 +277,8 @@ class DogeDynamicMaskAttn(nn.Module):
             dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
             dynamic_mask = dynamic_mask.transpose(-1, -2)
             dynamic_mask = dynamic_mask[:, :, None, :]
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-            attn_weights = attn_weights + causal_mask - dynamic_mask
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] - dynamic_mask
+            attn_weights = attn_weights + causal_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -329,8 +329,7 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
             dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
             dynamic_mask = dynamic_mask.transpose(-1, -2)
             dynamic_mask = dynamic_mask[:, :, None, :]
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-            attn_weights = attn_weights + causal_mask - dynamic_mask
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] - dynamic_mask
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
