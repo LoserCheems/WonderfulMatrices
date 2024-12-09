@@ -234,110 +234,6 @@ class DogeDynamicMaskAttn(nn.Module):
             bias=config.hidden_bias,
         )
 
-    def _update_causal_mask(
-        self,
-        attention_mask: torch.Tensor = None,
-        dynamic_mask: torch.Tensor = None,
-        input_tensor: torch.Tensor = None,
-        cache_position: torch.Tensor = None,
-        past_key_values: Cache = None,
-        output_attentions: bool = False,
-    ):
-        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
-        using_static_cache = isinstance(past_key_values, StaticCache)
-
-        dtype, device = input_tensor.dtype, input_tensor.device
-        sequence_length = input_tensor.shape[1]
-        if using_static_cache:
-            target_length = past_key_values.get_max_cache_shape()
-        else:
-            target_length = (
-                attention_mask.shape[-1]
-                if isinstance(attention_mask, torch.Tensor)
-                else past_seen_tokens + sequence_length + 1
-            )
-
-        # in case the provided `attention` mask is 2D, we generate a causal mask here (4D).
-        causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
-            attention_mask=attention_mask,
-            dynamic_mask=dynamic_mask,
-            sequence_length=sequence_length,
-            target_length=target_length,
-            dtype=dtype,
-            device=device,
-            cache_position=cache_position,
-            batch_size=input_tensor.shape[0],
-        )
-
-        return causal_mask
-
-    @staticmethod
-    def _prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
-        attention_mask: torch.Tensor = None,
-        dynamic_mask: torch.Tensor = None,
-        sequence_length: int = None,
-        target_length: int = None,
-        dtype: torch.dtype = None,
-        device: torch.device = None,
-        cache_position: torch.Tensor = None,
-        batch_size: int = None,
-        **kwargs,
-    ):
-        """
-        Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
-        `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
-
-        Args:
-            attention_mask (`torch.Tensor`):
-                A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape
-                `(batch_size, 1, query_length, key_value_length)`.
-            dynamic_mask (`torch.Tensor`):
-                A 3D dynamic mask of shape `(batch_size, num_heads, key_value_length)`.
-            sequence_length (`int`):
-                The sequence length being processed.
-            target_length (`int`):
-                The target length: when generating with static cache, the mask should be as long as the static cache,
-                to account for the 0 padding, the part of the cache that is not filled yet.
-            dtype (`torch.dtype`):
-                The dtype to use for the 4D attention mask.
-            device (`torch.device`):
-                The device to plcae the 4D attention mask on.
-            cache_position (`torch.Tensor`):
-                Indices depicting the position of the input sequence tokens in the sequence.
-            batch_size (`torch.Tensor`):
-                Batch size.
-        """
-        if attention_mask is not None and attention_mask.dim() == 4:
-            # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
-            causal_mask = attention_mask
-        else:
-            num_heads = 1 if dynamic_mask is None else dynamic_mask.size(1)
-            min_dtype = torch.finfo(dtype).min
-            causal_mask = torch.full(
-                (sequence_length, target_length),
-                fill_value=min_dtype,
-                dtype=dtype,
-                device=device,
-            )
-            if sequence_length != 1:
-                causal_mask = torch.triu(causal_mask, diagonal=1)
-            causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
-            causal_mask = causal_mask[None, None, :, :].expand(1, num_heads, -1, -1)
-            if attention_mask is not None:
-                causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
-                mask_length = attention_mask.shape[-1]
-                attention_mask = attention_mask[:, None, None, :].expand(-1, num_heads, 1, -1)
-                if dynamic_mask is not None and mask_length < dynamic_mask.shape[-1]:
-                    dynamic_mask = dynamic_mask[:, :, None, :].expand(-1, -1, 1, -1)
-                    attention_mask = attention_mask.clone() * dynamic_mask
-
-                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask
-                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-                    padding_mask == 0, min_dtype
-                )
-
-        return causal_mask
-
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -377,11 +273,12 @@ class DogeDynamicMaskAttn(nn.Module):
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
         # add mask to attention scores
-        dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
-        dynamic_mask = dynamic_mask.transpose(-1, -2)
-        causal_mask = self._update_causal_mask(attention_mask, dynamic_mask, hidden_states, cache_position, past_key_value)
-        causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
-        attn_weights = attn_weights + causal_mask
+        if attention_mask is not None:
+            dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
+            dynamic_mask = dynamic_mask.transpose(-1, -2)
+            dynamic_mask = dynamic_mask[:, :, None, :]
+            causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
+            attn_weights = attn_weights + causal_mask - dynamic_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -428,10 +325,12 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
-        dynamic_mask = dynamic_mask.transpose(-1, -2)
-        causal_mask = self._update_causal_mask(attention_mask, dynamic_mask, hidden_states, cache_position, past_key_value)
-        causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
+        if attention_mask is not None:
+            dynamic_mask = torch.exp(-torch.exp(self.A_log.float())) * F.softplus(dt_states)
+            dynamic_mask = dynamic_mask.transpose(-1, -2)
+            dynamic_mask = dynamic_mask[:, :, None, :]
+            causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
+            attn_weights = attn_weights + causal_mask - dynamic_mask
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
@@ -829,9 +728,9 @@ class DogeModel(DogePreTrainedModel):
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
-        # causal_mask = self._update_causal_mask(
-        #     attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
-        # )
+        causal_mask = self._update_causal_mask(
+            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
+        )
         hidden_states = inputs_embeds
 
         # create position embeddings to be shared across the decoder layers
@@ -840,6 +739,7 @@ class DogeModel(DogePreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
+        next_decoder_cache = None
 
         for decoder_layer in self.layers:
             if output_hidden_states:
@@ -849,7 +749,7 @@ class DogeModel(DogePreTrainedModel):
                 layer_outputs = self._gradient_checkpointing_func(
                     decoder_layer.__call__,
                     hidden_states,
-                    attention_mask,
+                    causal_mask,
                     position_ids,
                     past_key_values,
                     output_attentions,
@@ -860,7 +760,7 @@ class DogeModel(DogePreTrainedModel):
             else:
                 layer_outputs = decoder_layer(
                     hidden_states,
-                    attention_mask=attention_mask,
+                    attention_mask=causal_mask,
                     position_ids=position_ids,
                     past_key_value=past_key_values,
                     output_attentions=output_attentions,
@@ -897,100 +797,97 @@ class DogeModel(DogePreTrainedModel):
             attentions=all_self_attns,
         )
 
-    """Move to DogeInnerFuncAttn"""
-    # def _update_causal_mask(
-    #     self,
-    #     attention_mask: torch.Tensor,
-    #     input_tensor: torch.Tensor,
-    #     cache_position: torch.Tensor,
-    #     past_key_values: Cache,
-    #     output_attentions: bool,
-    # ):
-    #     # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
-    #     # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
-    #     # to infer the attention mask.
-    #     past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
-    #     using_static_cache = isinstance(past_key_values, StaticCache)
+    def _update_causal_mask(
+        self,
+        attention_mask: torch.Tensor = None,
+        input_tensor: torch.Tensor = None,
+        cache_position: torch.Tensor = None,
+        past_key_values: Cache = None,
+        output_attentions: bool = False,
+    ):
+        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+        using_static_cache = isinstance(past_key_values, StaticCache)
 
-    #     dtype, device = input_tensor.dtype, input_tensor.device
-    #     sequence_length = input_tensor.shape[1]
-    #     if using_static_cache:
-    #         target_length = past_key_values.get_max_cache_shape()
-    #     else:
-    #         target_length = (
-    #             attention_mask.shape[-1]
-    #             if isinstance(attention_mask, torch.Tensor)
-    #             else past_seen_tokens + sequence_length + 1
-    #         )
+        dtype, device = input_tensor.dtype, input_tensor.device
+        sequence_length = input_tensor.shape[1]
+        if using_static_cache:
+            target_length = past_key_values.get_max_cache_shape()
+        else:
+            target_length = (
+                attention_mask.shape[-1]
+                if isinstance(attention_mask, torch.Tensor)
+                else past_seen_tokens + sequence_length + 1
+            )
 
-    #     # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
-    #     causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position(
-    #         attention_mask,
-    #         sequence_length=sequence_length,
-    #         target_length=target_length,
-    #         dtype=dtype,
-    #         device=device,
-    #         cache_position=cache_position,
-    #         batch_size=input_tensor.shape[0],
-    #     )
+        # in case the provided `attention` mask is 2D, we generate a causal mask here (4D).
+        causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
+            attention_mask=attention_mask,
+            sequence_length=sequence_length,
+            target_length=target_length,
+            dtype=dtype,
+            device=device,
+            cache_position=cache_position,
+            batch_size=input_tensor.shape[0],
+        )
 
-    #     return causal_mask
+        return causal_mask
+    
+    @staticmethod
+    def _prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
+        attention_mask: torch.Tensor = None,
+        sequence_length: int = None,
+        target_length: int = None,
+        dtype: torch.dtype = None,
+        device: torch.device = None,
+        cache_position: torch.Tensor = None,
+        batch_size: int = None,
+        **kwargs,
+    ):
+        """
+        Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
+        `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
 
-    # @staticmethod
-    # def _prepare_4d_causal_attention_mask_with_cache_position(
-    #     attention_mask: torch.Tensor,
-    #     sequence_length: int,
-    #     target_length: int,
-    #     dtype: torch.dtype,
-    #     device: torch.device,
-    #     cache_position: torch.Tensor,
-    #     batch_size: int,
-    #     **kwargs,
-    # ):
-    #     """
-    #     Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
-    #     `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
+        Args:
+            attention_mask (`torch.Tensor`):
+                A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape
+                `(batch_size, 1, query_length, key_value_length)`.
+            sequence_length (`int`):
+                The sequence length being processed.
+            target_length (`int`):
+                The target length: when generating with static cache, the mask should be as long as the static cache,
+                to account for the 0 padding, the part of the cache that is not filled yet.
+            dtype (`torch.dtype`):
+                The dtype to use for the 4D attention mask.
+            device (`torch.device`):
+                The device to plcae the 4D attention mask on.
+            cache_position (`torch.Tensor`):
+                Indices depicting the position of the input sequence tokens in the sequence.
+            batch_size (`torch.Tensor`):
+                Batch size.
+        """
+        if attention_mask is not None and attention_mask.dim() == 4:
+            # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
+            causal_mask = attention_mask
+        else:
+            min_dtype = torch.finfo(dtype).min
+            causal_mask = torch.full(
+                (sequence_length, target_length),
+                fill_value=min_dtype, dtype=dtype, device=device,
+            )
+            if sequence_length != 1:
+                causal_mask = torch.triu(causal_mask, diagonal=1)
+            causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
+            causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
+            if attention_mask is not None:
+                causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
+                mask_length = attention_mask.shape[-1]
+                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+                padding_mask = padding_mask == 0
+                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+                    padding_mask, min_dtype
+                )
 
-    #     Args:
-    #         attention_mask (`torch.Tensor`):
-    #             A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape
-    #             `(batch_size, 1, query_length, key_value_length)`.
-    #         sequence_length (`int`):
-    #             The sequence length being processed.
-    #         target_length (`int`):
-    #             The target length: when generating with static cache, the mask should be as long as the static cache,
-    #             to account for the 0 padding, the part of the cache that is not filled yet.
-    #         dtype (`torch.dtype`):
-    #             The dtype to use for the 4D attention mask.
-    #         device (`torch.device`):
-    #             The device to plcae the 4D attention mask on.
-    #         cache_position (`torch.Tensor`):
-    #             Indices depicting the position of the input sequence tokens in the sequence.
-    #         batch_size (`torch.Tensor`):
-    #             Batch size.
-    #     """
-    #     if attention_mask is not None and attention_mask.dim() == 4:
-    #         # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
-    #         causal_mask = attention_mask
-    #     else:
-    #         min_dtype = torch.finfo(dtype).min
-    #         causal_mask = torch.full(
-    #             (sequence_length, target_length), fill_value=min_dtype, dtype=dtype, device=device
-    #         )
-    #         if sequence_length != 1:
-    #             causal_mask = torch.triu(causal_mask, diagonal=1)
-    #         causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
-    #         causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
-    #         if attention_mask is not None:
-    #             causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
-    #             mask_length = attention_mask.shape[-1]
-    #             padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-    #             padding_mask = padding_mask == 0
-    #             causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-    #                 padding_mask, min_dtype
-    #             )
-
-    #     return causal_mask
+        return causal_mask
 
 
 class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
