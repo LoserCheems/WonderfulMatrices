@@ -72,30 +72,8 @@ def main(args):
     ################################
     logger.info(f"Initializing model from config: {hyperparameters['model_config']}") 
     config = DogeConfig(
-        vocab_size=hyperparameters['model_config']['vocab_size'],
-        hidden_size=hyperparameters['model_config']['hidden_size'],
-        intermediate_size=hyperparameters['model_config']['intermediate_size'],
-        num_hidden_layers=hyperparameters['model_config']['num_hidden_layers'],
-        hidden_bias=hyperparameters['model_config']['hidden_bias'],
-        hidden_dropout=hyperparameters['model_config']['hidden_dropout'],
-        hidden_act=hyperparameters['model_config']['hidden_act'],
-        max_position_embeddings=hyperparameters['model_config']['max_position_embeddings'],
-        rope_theta=hyperparameters['model_config']['rope_theta'],
-        use_cache=hyperparameters['model_config']['use_cache'],
-        pad_token_id=hyperparameters['model_config']['pad_token_id'],
-        bos_token_id=hyperparameters['model_config']['bos_token_id'],
-        eos_token_id=hyperparameters['model_config']['eos_token_id'],
-        num_attention_heads=hyperparameters['model_config']['num_attention_heads'],
-        num_inner_values=hyperparameters['model_config']['num_inner_values'],
-        num_inner_value_heads=hyperparameters['model_config']['num_inner_value_heads'],
-        num_value_per_head=hyperparameters['model_config']['num_value_per_head'],
-        inner_values_retrieval_size=hyperparameters['model_config']['inner_values_retrieval_size'],
-        private_expert_retrieval_size=hyperparameters['model_config']['private_expert_retrieval_size'],
-        num_cdmmoe_experts=hyperparameters['model_config']['num_cdmmoe_experts'],
-        num_cdmmoe_heads=hyperparameters['model_config']['num_cdmmoe_heads'],
-        num_cdmmoe_experts_per_head=hyperparameters['model_config']['num_cdmmoe_experts_per_head'],
+        **hyperparameters['model_config']
     )
-    config.vocab_size = tokenizer.vocab_size
     model = DogeForCausalLM(config=config)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -225,7 +203,7 @@ def main(args):
 if __name__ == '__main__':
     
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--config_path', type=str, default='./examples/pretrain/configs/Doge-197M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--config_path', type=str, default='./examples/pretrain/configs/Doge-20M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='./logs')
     arg_parser.add_argument('--output_dir', type=str, default='./results')
     arg_parser.add_argument('--tokenizer_path', type=str, default='./examples/tokenizer', help='path to tokenizer')
