@@ -76,6 +76,18 @@ class RMSNorm(nn.Module):
         return f"{tuple(self.weight.shape)}, eps={self.variance_epsilon}"
 
 
+class Residual(nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+    
+    def forward(self, residual_states, hidden_states):
+        return self.weight * residual_states + hidden_states
+
+    def extra_repr(self):
+        return f"{tuple(self.weight.shape)}"
+
+
 class RotaryEmbedding(nn.Module):
     def __init__(self, config: Optional[DogeConfig] = None):
         super().__init__()
@@ -553,10 +565,13 @@ class DogeDecoderLayer(nn.Module):
         super().__init__()
         self.hidden_dropout = config.hidden_dropout
 
-        self.in_attn_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.pre_sequence_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
-        self.in_ff_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_sequence_residual = Residual(config.hidden_size)
+
+        self.pre_state_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.feed_forward = DogeMLP(config) if config.is_moe == False else DogeCDMoE(config)
+        self.post_state_residual = Residual(config.hidden_size)
 
     def forward(
         self,
@@ -595,7 +610,7 @@ class DogeDecoderLayer(nn.Module):
 
         # sequence transformation
         residual = hidden_states
-        hidden_states = self.in_attn_layernorm(hidden_states)
+        hidden_states = self.pre_sequence_layernorm(hidden_states)
         hidden_states, present_key_value = self.attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
@@ -607,14 +622,14 @@ class DogeDecoderLayer(nn.Module):
         )
         self_attn_weights = None
         hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
-        hidden_states = residual + hidden_states
+        hidden_states = self.post_sequence_residual(residual, hidden_states)
 
         # state transformation
         residual = hidden_states
-        hidden_states = self.in_ff_layernorm(hidden_states)
+        hidden_states = self.pre_state_layernorm(hidden_states)
         hidden_states = self.feed_forward(hidden_states)
         hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
-        hidden_states = residual + hidden_states
+        hidden_states = self.post_state_residual(residual, hidden_states)
 
         outputs = (hidden_states,)
 
