@@ -173,7 +173,6 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class DogeDynamicMaskAttn(nn.Module):
-    """Inner Function Attention from 'Wonderful Matrices' paper."""
 
     def __init__(self, config: DogeConfig, layer_idx: Optional[int] = None):
         super().__init__()
@@ -380,13 +379,7 @@ class DogeDynamicMaskAttn(nn.Module):
 
 
 class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
-    """
-    Doge Inner Function Attention module using torch.nn.functional.scaled_dot_product_attention.
-    This module inherits from `DogeInnerFuncAttn` as the weights of the module stays untouched.
-    The only changes are on the forward pass to adapt to SDPA API.
-    """
 
-    # Adapted from LlamaAttention.forward
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -443,22 +436,19 @@ DOGE_ATTENTION_CLASSES = {
 }
 
 
-class DogeCDMoE(nn.Module):
-    """Cross-Domain Mixture of Experts from 'Wonderful Matrices' paper."""
+class DogeMLP(nn.Module):
 
     def __init__(self, config: DogeConfig):
         super().__init__()
         self.hidden_dim = config.hidden_size
-        self.act_fn = ACT2FN[config.hidden_act]
         self.intermediate_dim = config.intermediate_size
+        self.act_fn = ACT2FN[config.hidden_act]
 
-        self.private_expert_retrieval_dim = config.private_expert_retrieval_size
-        self.num_cdmmoe_experts = config.num_cdmmoe_experts
-        self.num_cdmmoe_heads = config.num_cdmmoe_heads
-        self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
-        self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
-
-        # cross domain
+        self.gate_proj = nn.Linear(
+            self.hidden_dim,
+            self.intermediate_dim,
+            bias=config.hidden_bias,
+        )
         self.up_proj = nn.Linear(
             self.hidden_dim,
             self.intermediate_dim,
@@ -469,6 +459,28 @@ class DogeCDMoE(nn.Module):
             self.hidden_dim,
             bias=config.hidden_bias,
         )
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        **kwargs,
+    ) -> torch.Tensor:
+        hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
+        return hidden_states
+
+
+class DogeCDMoE(DogeMLP):
+
+    def __init__(self, config: DogeConfig):
+        super().__init__(config)
+        self.hidden_dim = config.hidden_size
+        self.act_fn = ACT2FN[config.hidden_act]
+
+        self.private_expert_retrieval_dim = config.private_expert_retrieval_size
+        self.num_cdmmoe_experts = config.num_cdmmoe_experts
+        self.num_cdmmoe_heads = config.num_cdmmoe_heads
+        self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
+        self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
 
         # queries and keys for retrieval private experts
         self.queries = nn.Linear(
@@ -526,11 +538,12 @@ class DogeCDMoE(nn.Module):
         up_embed = self.up_embed(indices)
 
         # efficient private experts retrieval
-        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)) * scores.softmax(dim=-1)
+        experts_weights = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
+        experts_weights = self.act_fn(experts_weights) * scores.softmax(dim=-1)
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
 
         # mix private experts states with cross domain states
-        hidden_states = self.down_proj(self.act_fn(self.up_proj(hidden_states)))
+        hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
         hidden_states = hidden_states + experts_states
         return hidden_states
 
@@ -543,7 +556,7 @@ class DogeDecoderLayer(nn.Module):
         self.in_attn_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
         self.in_ff_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.feed_forward = DogeCDMoE(config)
+        self.feed_forward = DogeMLP(config) if config.is_moe == False else DogeCDMoE(config)
 
     def forward(
         self,

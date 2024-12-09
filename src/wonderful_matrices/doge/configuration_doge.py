@@ -106,6 +106,8 @@ class DogeConfig(PretrainedConfig):
             Number of attention heads for each attention layer in the Transformer decoder.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
+        is_moe (`bool`, *optional*, defaults to `False`):
+            Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize
         num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
             Number of Private Experts for the Cross Domain Mixture of Experts.
         num_cdmmoe_heads (`int`, *optional*, defaults to 4):
@@ -140,6 +142,7 @@ class DogeConfig(PretrainedConfig):
         tie_word_embeddings=False,
         num_attention_heads=8,
         attention_dropout=0.0,
+        is_moe=False,
         num_cdmmoe_experts=4096,
         num_cdmmoe_heads=4,
         num_cdmmoe_experts_per_head=8,
@@ -165,6 +168,7 @@ class DogeConfig(PretrainedConfig):
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
         self.attention_dropout = attention_dropout
+        self.is_moe = is_moe
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head
