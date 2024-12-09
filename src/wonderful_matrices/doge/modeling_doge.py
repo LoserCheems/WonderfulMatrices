@@ -318,7 +318,7 @@ class DogeDynamicMaskAttn(nn.Module):
             if sequence_length != 1:
                 causal_mask = torch.triu(causal_mask, diagonal=1)
             causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
-            causal_mask = causal_mask[None, None, :, :].expand(batch_size, num_heads, -1, -1)
+            causal_mask = causal_mask[None, None, :, :].expand(1, num_heads, -1, -1)
             if attention_mask is not None:
                 causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
                 mask_length = attention_mask.shape[-1]
@@ -361,7 +361,7 @@ class DogeDynamicMaskAttn(nn.Module):
         )
 
         cos, sin = position_embeddings
-        query_states, query_states = apply_QK_rotary_pos_emb(query_states, query_states, cos, sin)
+        query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
@@ -413,7 +413,7 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
         value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
 
         cos, sin = position_embeddings
-        query_states, query_states = apply_QK_rotary_pos_emb(query_states, query_states, cos, sin)
+        query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
@@ -488,16 +488,16 @@ class DogeCDMoE(DogeMLP):
         self.hidden_dim = config.hidden_size
         self.act_fn = ACT2FN[config.hidden_act]
 
-        self.private_expert_retrieval_dim = config.private_expert_retrieval_size
+        self.expert_retrieval_dim = config.expert_retrieval_size
         self.num_cdmmoe_experts = config.num_cdmmoe_experts
         self.num_cdmmoe_heads = config.num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
         self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
 
-        # queries and keys for retrieval private experts
+        # queries and keys for retrieval experts
         self.queries = nn.Linear(
             self.hidden_dim,
-            self.num_cdmmoe_heads * self.private_expert_retrieval_dim,
+            self.num_cdmmoe_heads * self.expert_retrieval_dim,
             bias=False,
         )
         self.keys = nn.Parameter(
@@ -505,11 +505,11 @@ class DogeCDMoE(DogeMLP):
                 self.num_cdmmoe_heads,
                 self.num_keys,
                 2,
-                self.private_expert_retrieval_dim // 2,
+                self.expert_retrieval_dim // 2,
             )
         )
 
-        # private experts
+        # experts
         self.down_embed  = nn.Embedding(
             self.num_cdmmoe_experts,
             self.hidden_dim,
@@ -532,7 +532,7 @@ class DogeCDMoE(DogeMLP):
         queries = queries.view(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
-        # get expert scores and indices with the highest similarity
+        # get experts with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         if einx_add is not None:
             all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
@@ -544,17 +544,13 @@ class DogeCDMoE(DogeMLP):
             all_indices = all_indices.view(*indices_x.shape[:-1], -1)
         scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
-
-        # get related expert embeddings
         down_embed = self.down_embed(indices)
         up_embed = self.up_embed(indices)
 
-        # efficient private experts retrieval
+        # mix experts states with cross domain states
         experts_weights = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
         experts_weights = self.act_fn(experts_weights) * scores.softmax(dim=-1)
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
-
-        # mix private experts states with cross domain states
         hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
         hidden_states = hidden_states + experts_states
         return hidden_states

@@ -114,8 +114,8 @@ class DogeConfig(PretrainedConfig):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
         num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
-        private_expert_retrieval_size (`int`, *optional*, defaults to 256):
-            Dimension of the Private Expert retrieval states for the Cross Domain Mixture of Experts.
+        expert_retrieval_size (`int`, *optional*, defaults to 256):
+            Dimension of the Expert retrieval states for the Cross Domain Mixture of Experts.
     """
 
     model_type = "doge"
@@ -146,7 +146,7 @@ class DogeConfig(PretrainedConfig):
         num_cdmmoe_experts=4096,
         num_cdmmoe_heads=4,
         num_cdmmoe_experts_per_head=8,
-        private_expert_retrieval_size=256,
+        expert_retrieval_size=256,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -172,7 +172,7 @@ class DogeConfig(PretrainedConfig):
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head
-        self.private_expert_retrieval_size = private_expert_retrieval_size
+        self.expert_retrieval_size = expert_retrieval_size
 
         # Validate the correctness of rotary position embeddings parameters
         # BC: if there is a 'type' field, copy it it to 'rope_type'.
