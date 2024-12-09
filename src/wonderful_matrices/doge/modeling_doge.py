@@ -323,7 +323,7 @@ class DogeDynamicMaskAttn(nn.Module):
                 causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
                 mask_length = attention_mask.shape[-1]
                 attention_mask = attention_mask[:, None, None, :].expand(-1, num_heads, 1, -1)
-                if dynamic_mask is not None:
+                if dynamic_mask is not None and mask_length < dynamic_mask.shape[-1]:
                     dynamic_mask = dynamic_mask[None, :, None, :mask_length].expand(batch_size, -1, 1, -1)
                     attention_mask = attention_mask.clone() * dynamic_mask
 

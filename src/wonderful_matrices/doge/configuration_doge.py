@@ -46,7 +46,7 @@ class DogeConfig(PretrainedConfig):
             Dropout probability for each sequence transformation and state transformation module.
         hidden_act (`str` or `function`, *optional*, defaults to `"silu"`):
             The non-linear activation function (function or string) in the decoder.
-        max_position_embeddings (`int`, *optional*, defaults to 16384):
+        max_position_embeddings (`int`, *optional*, defaults to 2048):
             The maximum sequence length that this model might ever be used with.
         rope_theta (`float`, *optional*, defaults to 10000.0):
             The base period of the RoPE embeddings.
@@ -130,7 +130,7 @@ class DogeConfig(PretrainedConfig):
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
-        max_position_embeddings=16384,
+        max_position_embeddings=2048,
         rope_theta=10000.0,
         rope_scaling=None,
         initializer_range=0.02,
