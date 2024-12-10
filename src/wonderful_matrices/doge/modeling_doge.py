@@ -276,7 +276,7 @@ class DogeDynamicMaskAttention(nn.Module):
         if attention_mask is not None:
             dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
             dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
-            dynamic_mask = dynamic_mask != 1.0
+            dynamic_mask = dynamic_mask <= 1.0
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
             attn_weights = attn_weights + causal_mask
 
@@ -327,7 +327,7 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         if attention_mask is not None:
             dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
             dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
-            dynamic_mask = dynamic_mask != 1.0
+            dynamic_mask = dynamic_mask <= 1.0
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
 
         query_states = query_states.contiguous()
