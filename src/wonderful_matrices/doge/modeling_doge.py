@@ -23,6 +23,7 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
+from torch.nn.attention.flex_attention import flex_attention, create_mask
 import torch.utils.checkpoint
 from torch import nn
 
@@ -184,7 +185,7 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class DogeDynamicMaskAttn(nn.Module):
+class DogeDynamicMaskAttention(nn.Module):
 
     def __init__(self, config: DogeConfig, layer_idx: Optional[int] = None):
         super().__init__()
@@ -216,7 +217,7 @@ class DogeDynamicMaskAttn(nn.Module):
         )
         # dynamic mask for the QK^T attention score matrix
         self.A = nn.Parameter(
-            torch.ones(self.num_attention_heads)
+            torch.zeros(self.num_attention_heads)
         )
         self.dt_proj = nn.Linear(
             self.hidden_dim,
@@ -248,7 +249,6 @@ class DogeDynamicMaskAttn(nn.Module):
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
-        dt_states = self.dt_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
@@ -274,10 +274,10 @@ class DogeDynamicMaskAttn(nn.Module):
 
         # add mask to attention scores
         if attention_mask is not None:
-            dynamic_mask = torch.exp(self.A * dt_states)
-            dynamic_mask = dynamic_mask.transpose(-1, -2)
-            dynamic_mask = dynamic_mask[:, :, None, :]
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] + dynamic_mask
+            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+            dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
+            dynamic_mask = dynamic_mask != 1.0
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
             attn_weights = attn_weights + causal_mask
 
         # upcast attention scores to fp32
@@ -294,7 +294,7 @@ class DogeDynamicMaskAttn(nn.Module):
         return attn_output, past_key_value
 
 
-class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
+class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
 
     def forward(
         self,
@@ -310,7 +310,6 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
-        dt_states = self.dt_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
@@ -326,10 +325,10 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         if attention_mask is not None:
-            dynamic_mask = torch.exp(self.A * dt_states)
-            dynamic_mask = dynamic_mask.transpose(-1, -2)
-            dynamic_mask = dynamic_mask[:, :, None, :]
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]] + dynamic_mask
+            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+            dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
+            dynamic_mask = dynamic_mask != 1.0
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
@@ -351,7 +350,7 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttn):
 
 
 DOGE_ATTENTION_CLASSES = {
-    "eager": DogeDynamicMaskAttn,
+    "eager": DogeDynamicMaskAttention,
     "sdpa": DogeSdpaDynamicMaskAttn,
 }
 
@@ -878,6 +877,7 @@ class DogeModel(DogePreTrainedModel):
             causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
             causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
             if attention_mask is not None:
+                # print(f"attention_mask: {attention_mask.shape}")
                 causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
                 mask_length = attention_mask.shape[-1]
                 padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
