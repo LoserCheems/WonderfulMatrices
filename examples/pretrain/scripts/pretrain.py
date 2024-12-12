@@ -74,10 +74,7 @@ def main(args):
     config = DogeConfig(
         **hyperparameters['model_config']
     )
-    if args.resume_from_checkpoint:
-        model = DogeForCausalLM.from_pretrained(args.resume_from_checkpoint, config=config)
-    else:
-        model = DogeForCausalLM(config=config)
+    model = DogeForCausalLM(config=config)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
