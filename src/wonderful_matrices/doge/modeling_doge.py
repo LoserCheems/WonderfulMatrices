@@ -23,7 +23,6 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
-from torch.nn.attention.flex_attention import flex_attention, create_mask
 import torch.utils.checkpoint
 from torch import nn
 
@@ -40,7 +39,6 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
-    # is_einx_available,
     logging,
     replace_return_docstrings,
 )
