@@ -17,7 +17,7 @@ python ./examples/pretrain/scripts/download_datasets.py --save_dir ./datasets --
 You can preprocess the datasets using the following command:
 
 ```bash
-python ./examples/pretrain/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path ./examples/tokenizer --train_examples 100000000000 --test_examples 1000 --max_length 2048 --num_proc 16
+python ./examples/pretrain/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path ./examples/tokenizer --train_examples 81920000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
 >NOTE: Due to the large size of the complete dataset, we only provide a small dataset for demonstration. You can control the size of the dataset by modifying the `--train_examples` and `--test_examples` parameters.
@@ -25,17 +25,17 @@ python ./examples/pretrain/scripts/preprocess_datasets.py --datasets_dir ./datas
 You can concatenate all the sub-datasets using the following command:
 
 ```bash
-python ./examples/pretrain/scripts/concatenate_datasets.py --datasets_dir ./datasets --save_dir ./datasets --train_examples 100000000000 --test_examples 1000 --num_proc 16
+python ./examples/pretrain/scripts/concatenate_datasets.py --datasets_dir ./datasets --save_dir ./datasets --train_examples 81920000 --test_examples 1000 --num_proc 16
 ```
 
 ## Training
 
-We train the Doge-22M on 1 GPU using the following command:
+We train the Doge-20M on 1 GPU using the following command:
 
 > Note: You can modify the configuration file to implement multi-GPU training, etc.
 
 ```bash
-python ./examples/pretrain/scripts/pretrain.py --config_path ./examples/pretrain/configs/Doge-22M.yaml --logging_dir ./logs --output_dir ./results --tokenizer_path ./examples/tokenizer --resume_from_checkpoint <path_to_checkpoint>
+python ./examples/pretrain/scripts/pretrain.py --config_path ./examples/pretrain/configs/Doge-20M.yaml --logging_dir ./logs --output_dir ./results --tokenizer_path ./examples/tokenizer --resume_from_checkpoint <path_to_checkpoint>
 ```
 
 and so on.
