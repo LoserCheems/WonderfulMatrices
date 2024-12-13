@@ -18,7 +18,7 @@ training_args:
   seed: 233
   dataset_path: "/workspace/Doge/datasets/pretrain_dataset"
   logging_steps: 100
-  num_train_epochs: 1
+  num_train_epochs: 2
   per_epoch_max_steps: 40000
   per_device_train_batch_size: 1
   do_eval: True
