@@ -22,12 +22,12 @@ python ./examples/finetune/scripts/preprocess_datasets.py --datasets_dir ./datas
 
 ## Training
 
-We train the Doge-22M-Instruct on 1 GPU using the following command:
+We train the Doge-20M-Instruct on 1 GPU using the following command:
 
 > Note: You can modify the configuration file to implement multi-GPU training, etc.
 
 ```bash
-python ./examples/finetune/scripts/sft.py --pretrained_model_name_or_path JingzeShi/Doge-22M --config_path ./examples/finetune/configs/Doge-22M.yaml --logging_dir ./logs --output_dir ./results --resume_from_checkpoint <path_to_checkpoint>
+python ./examples/finetune/scripts/sft.py --pretrained_model_name_or_path JingzeShi/Doge-20M --config_path ./examples/finetune/configs/Doge-20M.yaml --logging_dir ./logs --output_dir ./results --resume_from_checkpoint <path_to_checkpoint>
 ```
 
 and so on.
