@@ -16,10 +16,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""PyTorch Doge model."""
+"""PyTorch Cheems model."""
 
 import math
-from typing import List, Optional, Tuple, Union
+from dataclasses import dataclass, field
+from typing import Optional, Tuple, Union, Any, Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -42,7 +43,8 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from .configuration_doge import DogeConfig
+from transformers.utils.import_utils import is_mamba_2_ssm_available
+from .configuration_cheems import CheemsConfig
 
 try:
     from einx import add as einx_add
@@ -52,7 +54,16 @@ except ImportError:
 
 logger = logging.get_logger(__name__)
 
-_CONFIG_FOR_DOC = "DogeConfig"
+
+if is_mamba_2_ssm_available():
+    from mamba_ssm.ops.triton.selective_state_update import selective_state_update
+    from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined
+else:
+    selective_state_update = None
+
+is_fast_path_available = all((selective_state_update, mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined))
+
+_CONFIG_FOR_DOC = "CheemsConfig"
 
 
 class RMSNorm(nn.Module):
@@ -85,10 +96,10 @@ class Residual(nn.Module):
 
     def extra_repr(self):
         return f"{tuple(self.weight.shape)}"
-
+    
 
 class RotaryEmbedding(nn.Module):
-    def __init__(self, config: Optional[DogeConfig] = None):
+    def __init__(self, config: Optional[CheemsConfig] = None):
         super().__init__()
         self.rope_kwargs = {}
 
@@ -156,6 +167,14 @@ def rotate_half(x):
     return torch.cat((-x2, x1), dim=-1)
 
 
+def apply_CB_rotary_pos_emb(c, b, cos, sin, position_ids=None, unsqueeze_dim=2):
+    cos = cos.unsqueeze(unsqueeze_dim)
+    sin = sin.unsqueeze(unsqueeze_dim)
+    c_embed = (c * cos) + (rotate_half(c) * sin)
+    b_embed = (b * cos) + (rotate_half(b) * sin)
+    return c_embed, b_embed
+
+
 def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     """Applies Rotary Position Embedding to the query and key tensors.
 
@@ -168,11 +187,10 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
             Deprecated and unused.
         unsqueeze_dim (`int`, *optional*, defaults to 1):
             The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
-            sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. For example, note
-            that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim]. Then, if q and
-            k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
-            cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
-            the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
+            sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. 
+            For example, note that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim]. 
+            Then, if q and k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. 
+            Similarly, if q and k have the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
     Returns:
         `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
@@ -183,9 +201,235 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
-class DogeDynamicMaskAttention(nn.Module):
+class HybridSSDAttnDynamicCache(DynamicCache):
+    """
+    A dynamic cache that can handle both the attn cache (which has a seq_len dimension) and the ssd cache (which has a constant shape regardless of seq_len).
 
-    def __init__(self, config: DogeConfig, layer_idx: Optional[int] = None):
+    This cache has two sets of lists of tensors: `key_cache` and `value_cache` for attn cache and `ssd_states` for ssd cache. 
+    Each of these lists has `num_layers` tensors. The expected shape for each tensor.
+
+    For attn layers, `key_cache` and `value_cache` have a shape of `(batch_size, num_attn_heads, seq_len, attn_head_dim)`,
+    while `ssd_states` have a shape of `(batch_size, 0)` (empty tensors).
+
+    For ssd layers, `key_cache` and `value_cache` have a shape of `(batch_size, 0)` (empty tensors),
+    while `ssm_states` represents the ssm state and has a shape of `(batch_size, num_ssd_heads, ssd_head_dim, ssd_state_size)`.
+    """
+    def __init__(self, config: CheemsConfig, batch_size, dtype=torch.float16, device=None, layer_type=None):
+        self.dtype = dtype
+        self.layer_type = layer_type
+
+        self.has_previous_state = False  # only used by ssd
+        self.ssd_head_dim = config.hidden_size // config.num_attention_heads
+        self.ssd_states = []
+        for i in range(config.num_hidden_layers):
+            if layer_type is None:
+                has_ssd_state = True
+            else:
+                has_ssd_state = layer_type[i] == "ssd"
+            
+            if has_ssd_state:
+                self.ssd_states += [
+                    torch.zeros(
+                        batch_size,
+                        config.num_attention_heads,
+                        self.ssd_head_dim,
+                        self.ssd_head_dim,
+                        device=device, dtype=dtype
+                    )
+                ]
+            else:
+                self.ssd_states += [torch.tensor([[]] * batch_size, device=device, dtype=dtype)]
+        self.ssd_past_length = [0 for _ in range(config.num_hidden_layers)]
+        
+        self.key_cache = [torch.tensor([[]] * batch_size, device=device, dtype=dtype) for _ in range(config.num_hidden_layers)]
+        self.value_cache = [torch.tensor([[]] * batch_size, device=device, dtype=dtype) for _ in range(config.num_hidden_layers)]
+    
+    def update(
+        self,
+        key_states: torch.Tensor,
+        value_states: torch.Tensor,
+        layer_idx: int,
+        cache_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Update the cache
+        if self.key_cache[layer_idx].shape[-1] == 0:
+            self.key_cache[layer_idx] = key_states
+            self.value_cache[layer_idx] = value_states
+        else:
+            self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=2)
+            self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=2)
+
+        return self.key_cache[layer_idx], self.value_cache[layer_idx]
+
+    def reorder_cache(self, beam_idx: torch.LongTensor):
+        """Reorders the cache for beam search, given the selected beam indices."""
+        for layer_idx in range(len(self.key_cache)):
+            device = self.key_cache[layer_idx].device
+            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx.to(device))
+            device = self.value_cache[layer_idx].device
+            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx.to(device))
+            device = self.ssd_states[layer_idx].device
+            self.ssd_states[layer_idx] = self.ssd_states[layer_idx].index_select(0, beam_idx.to(device))
+    
+    def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
+        """Returns the sequence length of the cached states. A layer index can be optionally passed."""
+        # take any layer that contains cache and not empty tensor
+
+        if self.layer_type[layer_idx] == 'ssd':
+            return self.ssd_past_length[layer_idx]
+
+        if self.key_cache[layer_idx].shape[-1] == 0:
+            return 0
+
+        return self.key_cache[layer_idx].shape[-2]
+    
+    def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
+        raise NotImplementedError("HybridSSDAttnDynamicCache does not have a legacy cache equivalent.")
+
+    @classmethod
+    def from_legacy_cache(cls, past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None) -> "DynamicCache":
+        raise NotImplementedError("HybridSSDAttnDynamicCache does not have a legacy cache equivalent.")
+
+
+class CheemsSSD(nn.Module):
+    """State Space Duality from 'Transformers are SSMs' paper."""
+
+    def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
+        super().__init__()
+
+        self.config = config
+        self.layer_idx = layer_idx
+
+        self.hidden_dim = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_dim // self.num_heads
+        self.chunk_len = config.ssd_chunk_size
+
+        self.c_proj = nn.Linear(
+            self.hidden_dim,
+            self.num_heads * self.head_dim,
+            bias=config.hidden_bias,
+        )
+        self.b_proj = nn.Linear(
+            self.hidden_dim,
+            self.num_heads * self.head_dim,
+            bias=config.hidden_bias,
+        )
+        self.A = nn.Parameter(
+            torch.ones(self.num_heads)
+        )
+        self.dt_proj = nn.Linear(
+            self.hidden_dim,
+            self.num_heads,
+            bias=config.hidden_bias,
+        )
+        self.x_proj = nn.Linear(
+            self.hidden_dim,
+            self.num_heads * self.head_dim,
+            bias=config.hidden_bias,
+        )
+        self.out_proj = nn.Linear(
+            self.hidden_dim,
+            self.hidden_dim,
+            bias=config.hidden_bias,
+        )
+    
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        cache_params: HybridSSDAttnDynamicCache = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        **kwargs,
+    ) -> torch.Tensor:
+        bsz, c_len, _ = hidden_states.shape
+        use_precomputed_states = (
+            cache_params is not None
+            and cache_params.has_previous_state
+            and c_len == 1
+            and cache_params.ssd_states[self.layer_idx].shape[0] == bsz
+        )
+
+        if attention_mask is not None:
+            hidden_states = hidden_states * attention_mask[:, :, None]
+        
+        if use_precomputed_states:
+            c_states = self.c_proj(hidden_states)
+            b_states = self.b_proj(hidden_states)
+            dt_states = self.dt_proj(hidden_states)
+            x_states = self.x_proj(hidden_states)
+            
+            c_states = c_states.view(bsz, c_len, self.num_heads, self.head_dim)
+            b_states = b_states.view(bsz, c_len, self.num_heads, self.head_dim)
+
+            # apply rotary position embeddings
+            cos, sin = position_embeddings
+            c_states, b_states = apply_CB_rotary_pos_emb(c_states, b_states, cos, sin)
+
+            # squeeze the c_len dimension
+            c_states = c_states.squeeze(1)
+            b_states = b_states.squeeze(1)
+            dt_states = dt_states.squeeze(1)
+            x_states = x_states.squeeze(1)
+
+            # reshape the states for the selective state update
+            c_states = c_states.view(bsz, self.num_heads, self.head_dim)
+            b_states = b_states.view(bsz, self.num_heads, self.head_dim)
+            dt_states = dt_states[:, :, None].expand(-1, -1, self.head_dim)
+            a_states = self.A[:, None, ...][:, :, None].expand(-1, self.head_dim, self.head_dim)
+            x_states = x_states.view(bsz, self.num_heads, self.head_dim)
+
+            ssd_output = selective_state_update(
+                cache_params.ssd_states[self.layer_idx],
+                x_states,
+                dt_states,
+                a_states,
+                b_states,
+                c_states,
+                z=None,
+                dt_bias=None,
+                dt_softplus=True,
+            )
+            ssd_output = ssd_output.view(bsz, self.num_heads * self.head_dim)[:, None, ...]
+        else:
+            c_states = self.c_proj(hidden_states)
+            b_states = self.b_proj(hidden_states)
+            dt_states = self.dt_proj(hidden_states)
+            x_states = self.x_proj(hidden_states)
+
+            c_states = c_states.view(bsz, c_len, self.num_heads, self.head_dim)
+            b_states = b_states.view(bsz, c_len, self.num_heads, self.head_dim)
+            x_states = x_states.view(bsz, c_len, self.num_heads, self.head_dim)
+
+            # apply rotary position embeddings
+            cos, sin = position_embeddings
+            c_states, b_states = apply_CB_rotary_pos_emb(c_states, b_states, cos, sin)
+
+            ssd_output, ssd_state = mamba_chunk_scan_combined(
+                x_states,
+                dt_states,
+                self.A,
+                b_states,
+                c_states,
+                chunk_size=self.chunk_len,
+                z=None,
+                seq_idx=None,
+                return_final_states=True,
+                dt_bias=None,
+                dt_softplus=True,
+            )
+            if ssd_state is not None and cache_params is not None:
+                cache_params.ssd_states[self.layer_idx].copy_(ssd_state)
+            ssd_output = ssd_output.view(bsz, c_len, -1)
+        ssd_output = self.out_proj(ssd_output)
+        return ssd_output
+
+
+class CheemsDynamicMaskAttention(nn.Module):
+
+    def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
         super().__init__()
 
         self.config = config
@@ -292,7 +536,7 @@ class DogeDynamicMaskAttention(nn.Module):
         return attn_output, past_key_value
 
 
-class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
+class CheemsSdpaDynamicMaskAttn(CheemsDynamicMaskAttention):
 
     def forward(
         self,
@@ -347,15 +591,15 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         return attn_output, past_key_value
 
 
-DOGE_ATTENTION_CLASSES = {
-    "eager": DogeDynamicMaskAttention,
-    "sdpa": DogeSdpaDynamicMaskAttn,
+CHEEMS_ATTENTION_CLASSES = {
+    "eager": CheemsDynamicMaskAttention,
+    "sdpa": CheemsSdpaDynamicMaskAttn,
 }
 
 
-class DogeMLP(nn.Module):
+class CheemsMLP(nn.Module):
 
-    def __init__(self, config: DogeConfig):
+    def __init__(self, config: CheemsConfig):
         super().__init__()
         self.hidden_dim = config.hidden_size
         self.intermediate_dim = config.intermediate_size
@@ -386,9 +630,10 @@ class DogeMLP(nn.Module):
         return hidden_states
 
 
-class DogeCDMoE(DogeMLP):
+class CheemsCDMoE(CheemsMLP):
+    """Cross Domain Mixture of Experts from 'Wonderful Matrices' paper."""
 
-    def __init__(self, config: DogeConfig):
+    def __init__(self, config: CheemsConfig):
         super().__init__(config)
         self.hidden_dim = config.hidden_size
         self.act_fn = ACT2FN[config.hidden_act]
@@ -461,17 +706,99 @@ class DogeCDMoE(DogeMLP):
         return hidden_states
 
 
-class DogeDecoderLayer(nn.Module):
-    def __init__(self, config: DogeConfig, layer_idx: Optional[int] = None):
+class CheemsSSDDecoderLayer(nn.Module):
+    def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
         super().__init__()
         self.hidden_dropout = config.hidden_dropout
 
         self.pre_sequence_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
+        self.ssd = CheemsSSD(config, layer_idx=layer_idx)
         self.post_sequence_residual = Residual(config.hidden_size)
 
         self.pre_state_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.feed_forward = DogeMLP(config) if config.is_moe == False else DogeCDMoE(config)
+        self.feed_forward = CheemsMLP(config) if config.is_moe == False else CheemsCDMoE(config)
+        self.post_state_residual = Residual(config.hidden_size)
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_value: Optional[Cache] = None,
+        output_attentions: Optional[bool] = False,
+        use_cache: Optional[bool] = False,
+        cache_position: Optional[torch.LongTensor] = None,
+        position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        **kwargs,
+    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+        """
+        Args:
+            hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`torch.FloatTensor`, *optional*):
+                attention mask of size `(batch_size, sequence_length)` if flash attention is used or `(batch_size, 1,
+                query_sequence_length, key_sequence_length)` if default attention is used.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                (see `past_key_values`).
+            past_key_value (`Tuple(torch.FloatTensor)`, *optional*): cached past key and value projection states
+            cache_position (`torch.LongTensor` of shape `(sequence_length)`, *optional*):
+                Indices depicting the position of the input sequence tokens in the sequence
+            position_embeddings (`Tuple[torch.FloatTensor, torch.FloatTensor]`, *optional*):
+                Tuple containing the cosine and sine positional embeddings of shape `(batch_size, seq_len, head_dim)`,
+                with `head_dim` being the embedding dimension of each attention head.
+            kwargs (`dict`, *optional*):
+                Arbitrary kwargs to be ignored, used for FSDP and other methods that injects code
+                into the model
+        """
+
+        # sequence transformation
+        residual = hidden_states
+        hidden_states = self.pre_sequence_layernorm(hidden_states)
+        hidden_states = self.ssd(
+            hidden_states,
+            attention_mask,
+            position_ids,
+            past_key_value,
+            cache_position,
+            position_embeddings,
+            **kwargs,
+        )
+        self_attn_weights = None
+        hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
+        hidden_states = self.post_sequence_residual(residual, hidden_states)
+
+        # state transformation
+        residual = hidden_states
+        hidden_states = self.pre_state_layernorm(hidden_states)
+        hidden_states = self.feed_forward(hidden_states)
+        hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
+        hidden_states = self.post_state_residual(residual, hidden_states)
+
+        outputs = (hidden_states,)
+
+        if output_attentions:
+            outputs += (self_attn_weights,)
+
+        if use_cache:
+            outputs += (past_key_value,)
+
+        return outputs
+
+
+class CheemsAttnDecoderLayer(nn.Module):
+    def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
+        super().__init__()
+        self.hidden_dropout = config.hidden_dropout
+
+        self.pre_sequence_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.attn = CHEEMS_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
+        self.post_sequence_residual = Residual(config.hidden_size)
+
+        self.pre_state_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.feed_forward = CheemsMLP(config) if config.is_moe == False else CheemsCDMoE(config)
         self.post_state_residual = Residual(config.hidden_size)
 
     def forward(
@@ -513,12 +840,12 @@ class DogeDecoderLayer(nn.Module):
         residual = hidden_states
         hidden_states = self.pre_sequence_layernorm(hidden_states)
         hidden_states, present_key_value = self.attn(
-            hidden_states=hidden_states,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_value=past_key_value,
-            cache_position=cache_position,
-            position_embeddings=position_embeddings,
+            hidden_states,
+            attention_mask,
+            position_ids,
+            past_key_value,
+            cache_position,
+            position_embeddings,
             **kwargs,
         )
         self_attn_weights = None
@@ -543,12 +870,12 @@ class DogeDecoderLayer(nn.Module):
         return outputs
 
 
-@add_start_docstrings("The bare Doge Model outputting raw hidden-states without any specific head on top.")
-class DogePreTrainedModel(PreTrainedModel):
-    config_class = DogeConfig
+@add_start_docstrings("The bare Cheems Model outputting raw hidden-states without any specific head on top.")
+class CheemsPreTrainedModel(PreTrainedModel):
+    config_class = CheemsConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
-    _no_split_modules = ["DogeDecoderLayer"]
+    _no_split_modules = ["CheemsSSDDecoderLayer", "CheemsAttnDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
     _supports_sdpa = True
     _supports_cache_class = True
@@ -567,7 +894,7 @@ class DogePreTrainedModel(PreTrainedModel):
                 module.weight.data[module.padding_idx].zero_()
 
 
-DOGE_INPUTS_DOCSTRING = r"""
+CHEEMS_INPUTS_DOCSTRING = r"""
     Args:
         input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
             Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you provide
@@ -642,9 +969,15 @@ DOGE_INPUTS_DOCSTRING = r"""
 """
 
 
-@add_start_docstrings("The bare Doge Model outputting raw hidden-states without any specific head on top.")
-class DogeModel(DogePreTrainedModel):
-    def __init__(self, config: DogeConfig):
+ALL_DECODER_LAYERS_TYPE = {
+    "ssd": CheemsSSDDecoderLayer,
+    "attn": CheemsAttnDecoderLayer,
+}
+
+
+@add_start_docstrings("The bare Cheems Model outputting raw hidden-states without any specific head on top.")
+class CheemsModel(CheemsPreTrainedModel):
+    def __init__(self, config: CheemsConfig):
         super().__init__(config)
         self.config = config
         self.padding_idx = config.pad_token_id
@@ -652,9 +985,13 @@ class DogeModel(DogePreTrainedModel):
 
         self.word_embed = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.rotary_emb = RotaryEmbedding(config)
-        self.layers = nn.ModuleList(
-            [DogeDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
-        )
+
+        decoder_layers = []
+        for i in range(config.num_hidden_layers):
+            layer_class = ALL_DECODER_LAYERS_TYPE[config.layers_type[i]]
+            decoder_layers.append(layer_class(config, layer_idx=i))
+        self.layers = nn.ModuleList(decoder_layers)
+        
         self.final_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.gradient_checkpointing = False
 
@@ -667,13 +1004,13 @@ class DogeModel(DogePreTrainedModel):
     def set_input_embeddings(self, value):
         self.word_embed = value
 
-    @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(CHEEMS_INPUTS_DOCSTRING)
     def forward(
         self,
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[Union[Cache, List[torch.FloatTensor]]] = None,
+        past_key_values: Optional[HybridSSDAttnDynamicCache] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
@@ -699,36 +1036,29 @@ class DogeModel(DogePreTrainedModel):
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embed(input_ids)
+        hidden_states = inputs_embeds
 
-        # kept for BC (non `Cache` `past_key_values` inputs)
-        return_legacy_cache = False
-        if use_cache and not isinstance(past_key_values, Cache):
-            return_legacy_cache = True
-            if past_key_values is None:
-                past_key_values = DynamicCache()
-            else:
-                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
-                logger.warning_once(
-                    "We detected that you are passing `past_key_values` as a tuple of tuples. This is deprecated and "
-                    "will be removed in v4.47. Please convert your cache or use an appropriate `Cache` class "
-                    "(https://huggingface.co/docs/transformers/kv_cache#legacy-cache-format)"
-                )
+        if use_cache and past_key_values is None:
+            logger.warning_once(
+                "Cheems requires an initialized `HybridSSDAttnDynamicCache` to return a cache. None was provided, so no cache will be returned."
+            )
 
         if cache_position is None:
-            past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
             cache_position = torch.arange(
-                past_seen_tokens,
-                past_seen_tokens + inputs_embeds.shape[1],
-                device=inputs_embeds.device,
+                hidden_states.shape[1],
+                device=hidden_states.device,
             )
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
-        causal_mask = self._update_causal_mask(
-            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
-        )
-        hidden_states = inputs_embeds
 
+        attn_mask = self._update_attn_mask(
+            attention_mask, hidden_states, cache_position
+        )
+        ssd_mask = self._update_ssd_mask(
+            attention_mask, cache_position
+        )
+    
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
@@ -738,6 +1068,8 @@ class DogeModel(DogePreTrainedModel):
         next_decoder_cache = None
 
         for decoder_layer in self.layers:
+            layer_mask = ssd_mask if isinstance(decoder_layer, CheemsSSDDecoderLayer) else attn_mask
+
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
@@ -745,7 +1077,7 @@ class DogeModel(DogePreTrainedModel):
                 layer_outputs = self._gradient_checkpointing_func(
                     decoder_layer.__call__,
                     hidden_states,
-                    causal_mask,
+                    layer_mask,
                     position_ids,
                     past_key_values,
                     output_attentions,
@@ -756,7 +1088,7 @@ class DogeModel(DogePreTrainedModel):
             else:
                 layer_outputs = decoder_layer(
                     hidden_states,
-                    attention_mask=causal_mask,
+                    attention_mask=layer_mask,
                     position_ids=position_ids,
                     past_key_value=past_key_values,
                     output_attentions=output_attentions,
@@ -767,9 +1099,6 @@ class DogeModel(DogePreTrainedModel):
 
             hidden_states = layer_outputs[0]
 
-            if use_cache:
-                next_decoder_cache = layer_outputs[2 if output_attentions else 1]
-
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
 
@@ -779,9 +1108,10 @@ class DogeModel(DogePreTrainedModel):
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
-        next_cache = next_decoder_cache if use_cache else None
-        if return_legacy_cache:
-            next_cache = next_cache.to_legacy_cache()
+        if past_key_values and not past_key_values.has_previous_state:
+            past_key_values.has_previous_state = True
+
+        next_cache = None if not use_cache else past_key_values
 
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
@@ -793,107 +1123,60 @@ class DogeModel(DogePreTrainedModel):
             attentions=all_self_attns,
         )
 
-    def _update_causal_mask(
+    def _update_attn_mask(
         self,
         attention_mask: torch.Tensor = None,
         input_tensor: torch.Tensor = None,
         cache_position: torch.Tensor = None,
-        past_key_values: Cache = None,
-        output_attentions: bool = False,
     ):
-        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
-        using_static_cache = isinstance(past_key_values, StaticCache)
 
         dtype, device = input_tensor.dtype, input_tensor.device
+        min_dtype = torch.finfo(dtype).min
         sequence_length = input_tensor.shape[1]
-        if using_static_cache:
-            target_length = past_key_values.get_max_cache_shape()
-        else:
-            target_length = (
-                attention_mask.shape[-1]
-                if isinstance(attention_mask, torch.Tensor)
-                else past_seen_tokens + sequence_length + 1
+        target_length = cache_position[-1] + 1
+        
+        causal_mask = torch.full(
+            (sequence_length, target_length),
+            fill_value=min_dtype, dtype=dtype, device=device,
+        )
+        if sequence_length != 1:
+            causal_mask = torch.triu(causal_mask, diagonal=1)
+        causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
+        causal_mask = causal_mask[None, None, :, :].expand(input_tensor.shape[0], 1, -1, -1)
+        if attention_mask is not None:
+            causal_mask = causal_mask.clone()
+            mask_length = attention_mask.shape[-1]
+            padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
+            padding_mask = padding_mask == 0
+            causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
+                padding_mask, min_dtype
             )
 
-        # in case the provided `attention` mask is 2D, we generate a causal mask here (4D).
-        causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
-            attention_mask=attention_mask,
-            sequence_length=sequence_length,
-            target_length=target_length,
-            dtype=dtype,
-            device=device,
-            cache_position=cache_position,
-            batch_size=input_tensor.shape[0],
-        )
-
         return causal_mask
-    
-    @staticmethod
-    def _prepare_4d_causal_attention_mask_with_cache_position_and_dynamic_mask(
-        attention_mask: torch.Tensor = None,
-        sequence_length: int = None,
-        target_length: int = None,
-        dtype: torch.dtype = None,
-        device: torch.device = None,
-        cache_position: torch.Tensor = None,
-        batch_size: int = None,
-        **kwargs,
+
+    def _update_ssd_mask(
+        self,
+        attention_mask: torch.Tensor,
+        cache_position: torch.Tensor,
     ):
         """
-        Creates a causal 4D mask of shape `(batch_size, 1, query_length, key_value_length)` from a 2D mask of shape
-        `(batch_size, key_value_length)`, or if the input `attention_mask` is already 4D, do nothing.
-
-        Args:
-            attention_mask (`torch.Tensor`):
-                A 2D attention mask of shape `(batch_size, key_value_length)` or a 4D attention mask of shape
-                `(batch_size, 1, query_length, key_value_length)`.
-            sequence_length (`int`):
-                The sequence length being processed.
-            target_length (`int`):
-                The target length: when generating with static cache, the mask should be as long as the static cache,
-                to account for the 0 padding, the part of the cache that is not filled yet.
-            dtype (`torch.dtype`):
-                The dtype to use for the 4D attention mask.
-            device (`torch.device`):
-                The device to plcae the 4D attention mask on.
-            cache_position (`torch.Tensor`):
-                Indices depicting the position of the input sequence tokens in the sequence.
-            batch_size (`torch.Tensor`):
-                Batch size.
+        No need for zeroing states when
+            1. Cached forward
+            2. Attending to all inputs
         """
-        if attention_mask is not None and attention_mask.dim() == 4:
-            # In this case we assume that the mask comes already in inverted form and requires no inversion or slicing.
-            causal_mask = attention_mask
-        else:
-            min_dtype = torch.finfo(dtype).min
-            causal_mask = torch.full(
-                (sequence_length, target_length),
-                fill_value=min_dtype, dtype=dtype, device=device,
-            )
-            if sequence_length != 1:
-                causal_mask = torch.triu(causal_mask, diagonal=1)
-            causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
-            causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
-            if attention_mask is not None:
-                # print(f"attention_mask: {attention_mask.shape}")
-                causal_mask = causal_mask.clone()  # copy to contiguous memory for in-place edit
-                mask_length = attention_mask.shape[-1]
-                padding_mask = causal_mask[:, :, :, :mask_length] + attention_mask[:, None, None, :]
-                padding_mask = padding_mask == 0
-                causal_mask[:, :, :, :mask_length] = causal_mask[:, :, :, :mask_length].masked_fill(
-                    padding_mask, min_dtype
-                )
-
-        return causal_mask
+        ssd_mask = attention_mask
+        if cache_position[0] > 0 or (attention_mask is not None and torch.all(attention_mask == 1)):
+            ssd_mask = None
+        return ssd_mask
 
 
-class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
+class CheemsForCausalLM(CheemsPreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config: DogeConfig):
+    def __init__(self, config: CheemsConfig):
         super().__init__(config)
         self.config = config
-        self.model = DogeModel(config)
+        self.model = CheemsModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
@@ -918,14 +1201,14 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
     def get_decoder(self):
         return self.model
 
-    @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(CHEEMS_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
     def forward(
         self,
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[torch.Tensor] = None,
+        past_key_values: Optional[HybridSSDAttnDynamicCache] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         labels: Optional[torch.LongTensor] = None,
         use_cache: Optional[bool] = None,
@@ -1006,13 +1289,13 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
     each row of the batch).
     """
 )
-class DogeForSequenceClassification(DogePreTrainedModel):
-    def __init__(self, config: DogeConfig):
+class CheemsForSequenceClassification(CheemsPreTrainedModel):
+    def __init__(self, config: CheemsConfig):
         super().__init__(config)
         self.config = config
         self.num_labels = config.num_labels
 
-        self.model = DogeModel(config)
+        self.model = CheemsModel(config)
         self.classifier = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
@@ -1024,7 +1307,7 @@ class DogeForSequenceClassification(DogePreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.word_embed = value
 
-    @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(CHEEMS_INPUTS_DOCSTRING)
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,

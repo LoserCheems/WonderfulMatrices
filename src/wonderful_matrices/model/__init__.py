@@ -31,6 +31,15 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
+    _import_structure["configuration_cheems"] = [
+        "CheemsConfig"
+    ]
+    _import_structure["modeling_cheems"] = [
+        "CheemsForCausalLM",
+        "CheemsForSequenceClassification",
+        "CheemsModel",
+        "CheemsPreTrainedModel",
+    ]
     _import_structure["configuration_doge"] = [
         "DogeConfig"
     ]
@@ -43,6 +52,7 @@ else:
 
 
 if TYPE_CHECKING:
+    from .configuration_cheems import CheemsConfig
     from .configuration_doge import DogeConfig
 
     try:
@@ -51,6 +61,12 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
+        from .modeling_cheems import (
+            CheemsForCausalLM,
+            CheemsForSequenceClassification,
+            CheemsModel,
+            CheemsPreTrainedModel,
+        )
         from .modeling_doge import (
             DogeForCausalLM,
             DogeForSequenceClassification,
