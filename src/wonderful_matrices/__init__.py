@@ -31,6 +31,9 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
+    _import_structure["configuration_cheems"] = [
+        "CheemsConfig"
+    ]
     _import_structure["configuration_doge"] = [
         "DogeConfig"
     ]
@@ -40,11 +43,17 @@ else:
         "DogeModel",
         "DogePreTrainedModel",
     ]
+    _import_structure["modeling_cheems"] = [
+        "CheemsForCausalLM",
+        "CheemsForSequenceClassification",
+        "CheemsModel",
+        "CheemsPreTrainedModel",
+    ]
     _import_structure["ssd"] = [
         "SSD",
     ]
-    _import_structure["innerfuncattn"] = [
-        "InnerFuncAttn",
+    _import_structure["dmattn"] = [
+        "DMAttn",
     ]
     _import_structure["cdmoe"] = [
         "CDMoE",
@@ -69,15 +78,22 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .doge.configuration_doge import DogeConfig
-        from .doge.modeling_doge import (
+        from .model.configuration_cheems import CheemsConfig
+        from .model.configuration_doge import DogeConfig
+        from .model.modeling_doge import (
             DogeForCausalLM,
             DogeForSequenceClassification,
             DogeModel,
             DogePreTrainedModel,
         )
+        from .model.modeling_cheems import (
+            CheemsForCausalLM,
+            CheemsForSequenceClassification,
+            CheemsModel,
+            CheemsPreTrainedModel,
+        )
         from .modules.ssd import SSD
-        from .modules.innerfuncattn import InnerFuncAttn
+        from .modules.dmattn import DMAttn
         from .modules.cdmoe import CDMoE
         from .modules.peer import PEER
         from .modules.seimoe import SEIMoE
