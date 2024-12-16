@@ -28,14 +28,17 @@ limitations under the License. -->
 </p>
 </h4>
 
-![Doge](./assets/doge_architecture.png)
+![Wonderful_Matrices](./assets/wonderful_matrices.png)
 > **Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks**\
 > 石竞泽*, 吴冰珩*, 何鹭*, 姜路畅*\
 > 论文: [arXiv:2407.16958](https://arxiv.org/abs/2407.16958)
 
-
-![InnferFuncAttn](./assets/mqar.png)
-![CDMoE](./assets/erme.png)
+![Cheems](./assets/cheems_architecture.png)
+![Doge](./assets/doge_architecture.png)
+![DMAttn](./assets/dmattn.png)
+![DMAttn](./assets/mqar.png)
+![CDMoE](./assets/cdmoe.png)
+![CDMoE](./assets/merm.png)
 
 
 ## 关于
@@ -72,30 +75,70 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 
 ## 使用
 
-我们编写了一个 [notebook](./examples/notebook.ipynb)(仍然在更新中) 来展示 数据处理, 模型训练和模型评估的整个流程. 当然你也可以独立使用以下一些模块.
+我们编写了一个 [notebook](./examples/notebook.ipynb)(仍然在更新中) 来展示 数据处理, 模型训练和模型评估的整个流程. 你可以使用以下完整架构或者单个模块.
 
-### Inner Function Attention
+### Cheems 架构
 
-Doge 模型的序列变换模块.
+Cheems 架构的建模代码.
 
-源代码: [innerfuncattn.py](./src/wonderful_matrices/modules/innerfuncattn.py)
+源代码: [modeling_cheems.py](./src/wonderful_matrices/model/modeling_cheems.py)
 
 使用方法:
 
 ```python
 import torch
-from wonderful_matrices.modules.innerfuncattn import InnerFuncAttn
+from wonderful_matrices.model.configuration_cheems import CheemsConfig
+from wonderful_matrices.model.modeling_cheems import CheemsForCausalLM
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
+config = CheemsConfig()
+model = CheemsForCausalLM(config)
+input_ids = tokenizer("Hi, how are you today?", return_tensors="pt")
+outputs = model.generate(**input_ids, max_length=100)
+print(tokenizer.batch_decode(outputs))
+```
+
+### Doge 架构
+
+Doge 架构的建模代码.
+
+源代码: [modeling_doge.py](./src/wonderful_matrices/model/modeling_doge.py)
+
+使用方法:
+
+```python
+import torch
+from wonderful_matrices.model.configuration_doge import DogeConfig
+from wonderful_matrices.model.modeling_doge import DogeForCausalLM
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
+config = DogeConfig()
+model = DogeForCausalLM(config)
+input_ids = tokenizer("Hi, how are you today?", return_tensors="pt")
+outputs = model.generate(**input_ids, max_length=100)
+print(tokenizer.batch_decode(outputs))
+```
+
+### 动态掩码注意力 模块
+
+Doge 模型的序列变换模块.
+
+源代码: [dmattn.py](./src/wonderful_matrices/modules/dmattn.py)
+
+使用方法:
+
+```python
+import torch
+from wonderful_matrices.modules.dmcattn import DMAttn
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
 attention_mask = torch.ones(batch, seq_len)
-attn = InnerFuncAttn(
+attn = DMAttn(
     d_model=dim,
     n_heads=1,
-    n_inner_values=16,
-    n_inner_value_heads=2,
-    n_inner_value_per_head=8,
-    d_inner_values_retrieval=64,
     max_position_embeddings=seq_len,
     layer_idx=0,
 )
@@ -103,7 +146,7 @@ y, past_key_values = attn(x, attention_mask)
 print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 ```
 
-### CDMoE
+### 交叉领域混合专家 模块
 
 Doge 模型的状态变换模块.
 

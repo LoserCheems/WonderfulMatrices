@@ -28,13 +28,17 @@ English | [简体中文](./README_zh.md)
 </p>
 </h4>
 
-![Doge](./assets/doge_architecture.png)
+![Wonderful_Matrices](./assets/wonderful_matrices.png)
 > **Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks**\
 > Jingze Shi*, Bingheng Wu*, Lu He*, Luchang Jiang*\
 > Paper: [arXiv:2407.16958](https://arxiv.org/abs/2407.16958)
 
-![InnferFuncAttn](./assets/mqar.png)
-![CDMoE](./assets/erme.png)
+![Cheems](./assets/cheems_architecture.png)
+![Doge](./assets/doge_architecture.png)
+![DMAttn](./assets/dmattn.png)
+![DMAttn](./assets/mqar.png)
+![CDMoE](./assets/cdmoe.png)
+![CDMoE](./assets/merm.png)
 
 ## About
 
@@ -77,30 +81,71 @@ pip install -e .
 
 ## Usage
 
-We have written a [notebook](./examples/notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. Of course, you can also use some of the following modules independently.
+We have written a [notebook](./examples/notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. 
+You can use the following complete architecture or individual modules.
 
-### Inner Function Attention
+### Cheems Architecture
 
-The sequence transformation module of the Doge model.
+The modeling code of the Cheems architecture.
 
-Source code: [innerfuncattn.py](./src/wonderful_matrices/modules/innerfuncattn.py)
+Source code: [modeling_cheems.py](./src/wonderful_matrices/model/modeling_cheems.py)
 
 Usage:
 
 ```python
 import torch
-from wonderful_matrices.modules.innerfuncattn import InnerFuncAttn
+from wonderful_matrices.model.configuration_cheems import CheemsConfig
+from wonderful_matrices.model.modeling_cheems import CheemsForCausalLM
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
+config = CheemsConfig()
+model = CheemsForCausalLM(config)
+input_ids = tokenizer("Hi, how are you today?", return_tensors="pt")
+outputs = model.generate(**input_ids, max_length=100)
+print(tokenizer.batch_decode(outputs))
+```
+
+### Doge Architecture
+
+The modeling code of the Doge architecture.
+
+Source code: [modeling_doge.py](./src/wonderful_matrices/model/modeling_doge.py)
+
+Usage:
+
+```python
+import torch
+from wonderful_matrices.model.configuration_doge import DogeConfig
+from wonderful_matrices.model.modeling_doge import DogeForCausalLM
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
+config = DogeConfig()
+model = DogeForCausalLM(config)
+input_ids = tokenizer("Hi, how are you today?", return_tensors="pt")
+outputs = model.generate(**input_ids, max_length=100)
+print(tokenizer.batch_decode(outputs))
+```
+
+### Dynamic Mask Attention Module
+
+The sequence transformation module of the Doge model.
+
+Source code: [dmattn.py](./src/wonderful_matrices/modules/dmattn.py)
+
+Usage:
+
+```python
+import torch
+from wonderful_matrices.modules.dmcattn import DMAttn
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
 attention_mask = torch.ones(batch, seq_len)
-attn = InnerFuncAttn(
+attn = DMAttn(
     d_model=dim,
     n_heads=1,
-    n_inner_values=16,
-    n_inner_value_heads=2,
-    n_inner_value_per_head=8,
-    d_inner_values_retrieval=64,
     max_position_embeddings=seq_len,
     layer_idx=0,
 )
@@ -108,7 +153,7 @@ y, past_key_values = attn(x, attention_mask)
 print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 ```
 
-### CDMoE
+### Cross Domain Mixture of Experts Module
 
 The state transformation module of the Doge model.
 
