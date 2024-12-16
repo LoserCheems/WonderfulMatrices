@@ -74,8 +74,8 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 ## Installation
 
 ```bash
-git clone https://github.com/LoserCheems/Doge.git
-cd Doge
+git clone https://github.com/LoserCheems/WonderfulMatrices.git
+cd WonderfulMatrices
 pip install -e .
 ```
 

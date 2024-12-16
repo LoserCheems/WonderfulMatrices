@@ -72,6 +72,13 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 - `pip install accelerate`: 用于分布式训练.
 - `pip install einx`: CDMoE 模块的快速实现依赖.
 
+## 安装
+
+```bash
+git clone https://github.com/LoserCheems/WonderfulMatrices.git
+cd WonderfulMatrices
+pip install -e .
+```
 
 ## 使用
 
