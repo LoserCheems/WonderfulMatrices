@@ -30,14 +30,14 @@ except ImportError:
 
 
 class CDMoE(nn.Module):
-    """Cross-Domain Mixture of Experts from 'Wonderful Matrices' paper."""
+    """Cross Domain Mixture of Experts from 'Wonderful Matrices' paper."""
 
     def __init__(
         self, 
         d_model: int,
         act_fn: str,
-        d_ff: int,
-        d_private_expert_retrieval: int,
+        d_cd: int,
+        d_expert_retrieval: int,
         n_experts: int,
         n_experts_heads: int,
         n_experts_per_head: int,
@@ -45,41 +45,44 @@ class CDMoE(nn.Module):
         super().__init__()
         self.hidden_dim = d_model
         self.act_fn = ACT2FN[act_fn]
-        self.intermediate_dim = d_ff
+        self.intermediate_dim = d_cd
 
-        self.private_expert_retrieval_dim = d_private_expert_retrieval
+        self.expert_retrieval_dim = d_expert_retrieval
         self.num_cdmmoe_experts = n_experts
         self.num_cdmmoe_heads = n_experts_heads
         self.num_cdmmoe_experts_per_head = n_experts_per_head
+        self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
 
-        # shared parameter up Linear
-        self.shared_up_proj = nn.Linear(
+        # cross domain
+        self.gate_proj = nn.Linear(
             self.hidden_dim,
             self.intermediate_dim,
         )
-        # shared parameter down Linear
-        self.shared_down_proj = nn.Linear(
+        self.up_proj = nn.Linear(
+            self.hidden_dim,
+            self.intermediate_dim,
+        )
+        self.down_proj = nn.Linear(
             self.intermediate_dim,
             self.hidden_dim,
         )
 
-        # queries and keys for retrieval private experts
+        # queries and keys for retrieval experts
         self.queries = nn.Linear(
             self.hidden_dim,
-            self.private_expert_retrieval_dim * self.num_cdmmoe_heads,
+            self.expert_retrieval_dim * self.num_cdmmoe_heads,
             bias=False,
         )
-        self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
         self.keys = nn.Parameter(
             torch.zeros(
                 self.num_cdmmoe_heads,
                 self.num_keys,
                 2,
-                self.private_expert_retrieval_dim // 2,
+                self.expert_retrieval_dim // 2,
             )
         )
 
-        # private experts
+        # experts
         self.down_embed = nn.Embedding(
             self.num_cdmmoe_experts,
             self.hidden_dim,
@@ -96,14 +99,12 @@ class CDMoE(nn.Module):
     ) -> torch.Tensor:
         bsz, seq_len, _ = hidden_states.shape
 
-        # queries
+        # get similarity with queries and keys
         queries = self.queries(hidden_states)
-        queries = queries.reshape(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
-
-        # get similarity with keys
+        queries = queries.view(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
-        # get expert scores and indices with the highest similarity
+        # get experts with the highest similarity
         (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         if einx_add is not None:
             all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
@@ -115,15 +116,13 @@ class CDMoE(nn.Module):
             all_indices = all_indices.view(*indices_x.shape[:-1], -1)
         scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
-
-        # get related expert embeddings based on indices
         down_embed = self.down_embed(indices)
         up_embed = self.up_embed(indices)
 
-        # efficient retrieval of private experts
-        experts_weights = self.act_fn(torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed) * scores.softmax(dim=-1))
+        # mix experts states with cross domain states
+        experts_weights = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
+        experts_weights = self.act_fn(experts_weights) * scores.softmax(dim=-1)
         experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
-
-        # mix with shared parameters
-        hidden_states = self.shared_down_proj(self.act_fn(self.shared_up_proj(hidden_states))) + experts_states
+        hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
+        hidden_states = hidden_states + experts_states
         return hidden_states

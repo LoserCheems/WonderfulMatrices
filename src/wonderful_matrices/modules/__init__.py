@@ -34,8 +34,8 @@ else:
     _import_structure["ssd"] = [
         "SSD",
     ]
-    _import_structure["innerfuncattn"] = [
-        "InnerFuncAttn",
+    _import_structure["dmattn"] = [
+        "DMAttn",
     ]
     _import_structure["cdmoe"] = [
         "CDMoE",
@@ -61,7 +61,7 @@ if TYPE_CHECKING:
         pass
     else:
         from .ssd import SSD
-        from .innerfuncattn import InnerFuncAttn
+        from .dmattn import DMAttn
         from .cdmoe import CDMoE
         from .peer import PEER
         from .seimoe import SEIMoE
