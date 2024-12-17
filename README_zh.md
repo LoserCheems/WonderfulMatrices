@@ -110,7 +110,7 @@ print(tokenizer.batch_decode(outputs))
 
 Doge 架构的建模代码.
 
-源代码: [modeling_doge.py](./src/wonderful_matrices/model/modeling_doge.py)
+源代码: [modeling_doge.py](./src/wonderful_matrices/models/modeling_doge.py)
 
 使用方法:
 

@@ -110,7 +110,7 @@ print(tokenizer.batch_decode(outputs))
 
 The modeling code of the Doge architecture.
 
-Source code: [modeling_doge.py](./src/wonderful_matrices/model/modeling_doge.py)
+Source code: [modeling_doge.py](./src/wonderful_matrices/models/modeling_doge.py)
 
 Usage:
 
