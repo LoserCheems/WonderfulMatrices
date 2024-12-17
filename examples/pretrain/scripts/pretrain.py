@@ -8,8 +8,8 @@ import datasets
 import transformers
 from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
-from wonderful_matrices.model.configuration_doge import DogeConfig
-from wonderful_matrices.model.modeling_doge import DogeModel, DogeForCausalLM
+from wonderful_matrices.models.configuration_doge import DogeConfig
+from wonderful_matrices.models.modeling_doge import DogeModel, DogeForCausalLM
 
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer
 
-from wonderful_matrices.model import DogeConfig
-from wonderful_matrices.model import DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
+from wonderful_matrices.models import DogeConfig
+from wonderful_matrices.models import DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
 
 
 # 注册模型
