@@ -78,15 +78,15 @@ if TYPE_CHECKING:
     except OptionalDependencyNotAvailable:
         pass
     else:
-        from .model.configuration_cheems import CheemsConfig
-        from .model.configuration_doge import DogeConfig
-        from .model.modeling_doge import (
+        from .models.configuration_cheems import CheemsConfig
+        from .models.configuration_doge import DogeConfig
+        from .models.modeling_doge import (
             DogeForCausalLM,
             DogeForSequenceClassification,
             DogeModel,
             DogePreTrainedModel,
         )
-        from .model.modeling_cheems import (
+        from .models.modeling_cheems import (
             CheemsForCausalLM,
             CheemsForSequenceClassification,
             CheemsModel,
