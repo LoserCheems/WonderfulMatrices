@@ -9,8 +9,8 @@ import transformers
 from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
 from trl import SFTConfig, SFTTrainer
 
-from wonderful_matrices.model import DogeConfig
-from wonderful_matrices.model import DogeModel, DogeForCausalLM
+from wonderful_matrices.models import DogeConfig
+from wonderful_matrices.models import DogeModel, DogeForCausalLM
 
 
 logger = logging.getLogger(__name__)
