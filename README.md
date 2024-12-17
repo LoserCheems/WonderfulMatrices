@@ -88,7 +88,7 @@ You can use the following complete architecture or individual modules.
 
 The modeling code of the Cheems architecture.
 
-Source code: [modeling_cheems.py](./src/wonderful_matrices/model/modeling_cheems.py)
+Source code: [modeling_cheems.py](./src/wonderful_matrices/models/modeling_cheems.py)
 
 Usage:
 

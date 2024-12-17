@@ -88,7 +88,7 @@ pip install -e .
 
 Cheems 架构的建模代码.
 
-源代码: [modeling_cheems.py](./src/wonderful_matrices/model/modeling_cheems.py)
+源代码: [modeling_cheems.py](./src/wonderful_matrices/models/modeling_cheems.py)
 
 使用方法:
 
