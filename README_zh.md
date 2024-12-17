@@ -187,12 +187,12 @@ print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 
 ```bibtex
 @misc{shi2024wonderfulmatrices,
-      title={Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks}, 
-      author={Jingze Shi and Bingheng Wu and Lu He and Luchang Jiang},
+      title={Wonderful Matrices: Combining for a More Efficient and Effective Foundation Model Architecture}, 
+      author={Jingze Shi and Bingheng Wu},
       year={2024},
-      eprint={2407.16958},
+      eprint={2412.11834},
       archivePrefix={arXiv},
       primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2407.16958}, 
+      url={https://arxiv.org/abs/2412.11834}, 
 }
 ```
