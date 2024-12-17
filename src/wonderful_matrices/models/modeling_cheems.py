@@ -3,7 +3,7 @@
 #
 # This code is based on the Wonderful Matrices paper implementation.
 #
-#     https://arxiv.org/abs/2407.16958
+#     https://arxiv.org/abs/2412.11834
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -428,7 +428,8 @@ class CheemsSSD(nn.Module):
 
 
 class CheemsDynamicMaskAttention(nn.Module):
-
+    """Dynamic Mask Attention from 'Wonderful Matrices' paper."""
+    
     def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
         super().__init__()
 

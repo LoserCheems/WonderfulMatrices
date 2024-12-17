@@ -3,7 +3,7 @@ Copyright 2024 Jingze Shi and Bingheng Wu. All rights reserved.
 
 This code is based on the Wonderful Matrices paper implementation.
 
-    https://arxiv.org/abs/2407.16958
+    https://arxiv.org/abs/2412.11834
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ English | [简体中文](./README_zh.md)
 ![Wonderful_Matrices](./assets/wonderful_matrices.png)
 > **Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks**\
 > Jingze Shi*, Bingheng Wu*, Lu He*, Luchang Jiang*\
-> Paper: [arXiv:2407.16958](https://arxiv.org/abs/2407.16958)
+> Paper: [arXiv:2412.11834](https://arxiv.org/abs/2412.11834)
 
 ![Cheems](./assets/cheems_architecture.png)
 ![Doge](./assets/doge_architecture.png)
@@ -42,7 +42,7 @@ English | [简体中文](./README_zh.md)
 
 ## About
 
-This project is a continuation of the discussion section of the [Wonderful Matrices](https://arxiv.org/abs/2407.16958) paper.
+This project is a continuation of the discussion section of the [Wonderful Matrices](https://arxiv.org/abs/2412.11834) paper.
 
 We hope to further explore whether the Transformer framework allows for more complex feedforward network structures by training a small language model (SLM) based on the `Doge` architecture, enabling the model to have fewer cache states and larger knowledge capacity.
 
