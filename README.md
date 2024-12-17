@@ -30,7 +30,7 @@ English | [简体中文](./README_zh.md)
 
 ![Wonderful_Matrices](./assets/wonderful_matrices.png)
 > **Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks**\
-> Jingze Shi*, Bingheng Wu*, Lu He*, Luchang Jiang*\
+> Jingze Shi*, Bingheng Wu*\
 > Paper: [arXiv:2412.11834](https://arxiv.org/abs/2412.11834)
 
 ![Cheems](./assets/cheems_architecture.png)

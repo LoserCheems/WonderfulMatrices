@@ -30,7 +30,7 @@ limitations under the License. -->
 
 ![Wonderful_Matrices](./assets/wonderful_matrices.png)
 > **Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks**\
-> 石竞泽*, 吴冰珩*, 何鹭*, 姜路畅*\
+> 石竞泽*, 吴冰珩*\
 > 论文: [arXiv:2412.11834](https://arxiv.org/abs/2412.11834)
 
 ![Cheems](./assets/cheems_architecture.png)
