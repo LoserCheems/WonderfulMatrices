@@ -2,14 +2,16 @@
 library_name: transformers
 license: apache-2.0
 datasets:
-- HuggingFaceTB/smollm-corpus
+- HuggingFaceTB/smoltalk
+base_model:
+- JingzeShi/Doge-20M
 language:
 - en
-pipeline_tag: text-generation
+pipeline_tag: question-answering
 ---
 
 
-# **Doge 60M**
+# **Doge 20M Instruct**
 
 Doge is an ongoing research project where we aim to train a series of small language models to further explore whether the Transformer framework allows for more complex feedforward network structures, enabling the model to have fewer cache states and larger knowledge capacity.
 
@@ -20,34 +22,54 @@ In addition, Doge uses Dynamic Mask Attention as sequence transformation and can
 ## Uses
 
 ```python
->>> from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig, TextStreamer
 
->>> tokenizer = AutoTokenizer.from_pretrained("JingzeShi/Doge-60M")
->>> model = AutoModelForCausalLM.from_pretrained("JingzeShi/Doge-60M", trust_remote_code=True)
->>> inputs = tokenizer("Hey how are you doing?", return_tensors="pt")
+tokenizer = AutoTokenizer.from_pretrained("JingzeShi/Doge-20M-Instruct")
+model = AutoModelForCausalLM.from_pretrained("JingzeShi/Doge-20M-Instruct", trust_remote_code=True)
 
->>> out = model.generate(**inputs, max_new_tokens=100)
->>> print(tokenizer.batch_decode(out))
+generation_config = GenerationConfig(
+      max_new_tokens=100, 
+      use_cache=True, 
+      do_sample=True, 
+      temperature=0.8, 
+      repetition_penalty=1.0
+)
+steamer = TextStreamer(
+      tokenizer=tokenizer, 
+      skip_prompt=True
+)
+conversation = [
+      {"role": "user", "content": prompt}
+]
+inputs = tokenizer.apply_chat_template(
+    conversation=conversation,
+    tokenize=True,
+    return_tensors="pt",
+)
+
+outputs = model.generate(
+    inputs, 
+    tokenizer=tokenizer,
+    generation_config=generation_config, 
+    streamer=steamer
+)
 ```
 
 
 ## Model Details
 
-> NOTE: This model has not been fine-tuned for instruction
-
 > TODO: The larger model is under training and will be uploaded soon.
 
 
-|| Training Data | Epochs | Steps | Content Length | Tokens | LR | Batch Size | Precision |
-|---|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/LoserCheems/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 2 | 10k | 2048 | 5B | 8e-4 | 0.25M | bfloat16 |
-| [Doge-60M](https://huggingface.co/LoserCheems/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 2 | 20k | 2048 | 20B | 6e-4 | 0.5M | bfloat16 |
+|| Training Data | Epochs | Content Length | LR | Batch Size | Precision |
+|---|---|---|---|---|---|---|
+| [Doge-20M-Instruct](https://huggingface.co/LoserCheems/Doge-20M-Instruct) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 8192 | 8e-5 | 1M | bfloat16 |
 
 
 **Training Environment**:
 - Image: nvcr.io/nvidia/pytorch:24.10-py3
 - Hardware: 1x NVIDIA RTX 4090
-- Software: Transformers
+- Software: Transformers, TRL
 
 ## Citation
 
