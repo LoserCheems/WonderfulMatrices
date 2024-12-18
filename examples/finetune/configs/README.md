@@ -18,7 +18,6 @@ Doge is an ongoing research project where we aim to train a series of small lang
 In addition, Doge uses Dynamic Mask Attention as sequence transformation and can use Multi-Layer Perceptron or Cross Domain Mixture of Experts as state transformation. Dynamic Mask Attention allows the Transformer to use self-attention during training and state space during inference, and Cross Domain Mixture of Experts can directly inherit the weights of Multi-Layer Perceptron for further training. This model is trained by Jingze Shi, it only allows text input and text generation, for detailed algorithm and model architecture, please refer to [Wonderful Matrices](https://arxiv.org/abs/2412.11834), the ongoing research repository is [Wonderful Matrices](https://github.com/LoserCheems/WonderfulMatrices).
 
 
-
 ## Uses
 
 ```python
@@ -60,16 +59,17 @@ outputs = model.generate(
 
 > TODO: The larger model is under training and will be uploaded soon.
 
-
-|| Training Data | Epochs | Content Length | LR | Batch Size | Precision |
+**Training**:
+| Model | Training Data | Epochs | Content Length | LR | Batch Size | Precision |
 |---|---|---|---|---|---|---|
-| [Doge-20M-Instruct](https://huggingface.co/LoserCheems/Doge-20M-Instruct) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 8192 | 8e-5 | 1M | bfloat16 |
+| [Doge-20M-Instruct](https://huggingface.co/JingzeShi/Doge-20M-Instruct) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 8192 | 8e-5 | 1M | bfloat16 |
+| [Doge-60M-Instruct](https://huggingface.co/JingzeShi/Doge-60M-Instruct) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 8192 | 6e-5 | 1M | bfloat16 |
 
-
-**Training Environment**:
+**Environment**:
 - Image: nvcr.io/nvidia/pytorch:24.10-py3
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers, TRL
+
 
 ## Citation
 
