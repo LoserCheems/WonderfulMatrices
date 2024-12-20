@@ -37,6 +37,8 @@ steamer = TextStreamer(
       tokenizer=tokenizer, 
       skip_prompt=True
 )
+
+prompt = "Hi, how are you doing today?"
 conversation = [
       {"role": "user", "content": prompt}
 ]
