@@ -38,12 +38,12 @@ setup(
     name='wonderful_matrices',
     license='Apache 2.0',
     version=__version__,
-    description="WonderFul Matrices Architecture For Doge Model",
+    description="WonderFul Matrices Architecture For Language Modeling",
     long_description=open(os.path.join(file_path, 'README.md'), encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     author='Jingze Shi',
     author_email="losercheems@gmail.com",
-    url='https://github.com/LoserCheems/Doge',
+    url='https://github.com/LoserCheems/WonderfulMatrices',
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
@@ -58,5 +58,5 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     python_requires='>=3.9',
     zip_safe=False,
-    keywords='wonderful_matrices, doge, pytorch, transformers, trl',
+    keywords=['wonderful_matrices', 'cheems', 'doge', 'pytorch', 'transformers', 'trl'],
 )
