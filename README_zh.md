@@ -183,7 +183,7 @@ print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 
 ## 引用
 
-如果您使用了本代码库, 或者认为我们的工作有价值, 请引用 Doge:
+如果您使用了本代码库, 或者认为我们的工作有价值, 请引用我们的论文:
 
 ```bibtex
 @misc{shi2024wonderfulmatrices,
