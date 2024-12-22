@@ -37,17 +37,17 @@ else:
     _import_structure["configuration_doge"] = [
         "DogeConfig"
     ]
-    _import_structure["modeling_doge"] = [
-        "DogeForCausalLM",
-        "DogeForSequenceClassification",
-        "DogeModel",
-        "DogePreTrainedModel",
-    ]
     _import_structure["modeling_cheems"] = [
         "CheemsForCausalLM",
         "CheemsForSequenceClassification",
         "CheemsModel",
         "CheemsPreTrainedModel",
+    ]
+    _import_structure["modeling_doge"] = [
+        "DogeForCausalLM",
+        "DogeForSequenceClassification",
+        "DogeModel",
+        "DogePreTrainedModel",
     ]
     _import_structure["ssd"] = [
         "SSD",
@@ -80,17 +80,17 @@ if TYPE_CHECKING:
     else:
         from .models.configuration_cheems import CheemsConfig
         from .models.configuration_doge import DogeConfig
-        from .models.modeling_doge import (
-            DogeForCausalLM,
-            DogeForSequenceClassification,
-            DogeModel,
-            DogePreTrainedModel,
-        )
         from .models.modeling_cheems import (
             CheemsForCausalLM,
             CheemsForSequenceClassification,
             CheemsModel,
             CheemsPreTrainedModel,
+        )
+        from .models.modeling_doge import (
+            DogeForCausalLM,
+            DogeForSequenceClassification,
+            DogeModel,
+            DogePreTrainedModel,
         )
         from .modules.ssd import SSD
         from .modules.dmattn import DMAttn
