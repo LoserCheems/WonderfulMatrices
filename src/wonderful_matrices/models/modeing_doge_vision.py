@@ -85,35 +85,16 @@ class DogePatchEmbedding(nn.Module):
         return image_embedding
 
 
-class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
+class DogeForCausalVLM(DogeForCausalLM):
     _tied_weights_keys = ["lm_head.weight"]
 
     def __init__(self, config: DogeVisionConfig):
         super().__init__(config)
         self.config = config
         self.pixel_embed = DogePatchEmbedding(config)
-        self.causal_model = DogeForCausalLM(config)
 
         # Initialize weights and apply final processing
         self.post_init()
-
-    def get_input_embeddings(self):
-        return self.causal_model.get_input_embeddings()
-
-    def set_input_embeddings(self, value):
-        self.causal_model.set_input_embeddings(value)
-
-    def get_output_embeddings(self):
-        return self.causal_model.get_output_embeddings()
-
-    def set_output_embeddings(self, new_embeddings):
-        self.causal_model.set_output_embeddings(new_embeddings)
-
-    def get_decoder(self):
-        return self.causal_model.get_decoder()
-    
-    def set_decoder(self, decoder):
-        self.causal_model.set_decoder(decoder)
 
     def forward(
         self,
@@ -145,7 +126,7 @@ class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
         if inputs_embeds is not None and pixel_values is not None:
             inputs_embeds = torch.cat([inputs_embeds, pixel_embeds], dim=1)
 
-        outputs = self.causal_model(
+        outputs = self.model(
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
