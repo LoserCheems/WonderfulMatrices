@@ -22,10 +22,10 @@ from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_rope_utils import rope_config_validation
 
 
-class DogeConfig(PretrainedConfig):
+class DogeVisionConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`DogeModel`]. It is used to instantiate an Doge
-    model according to the specified arguments, defining the model architecture like [LoserCheems/doge-tiny-test](https://huggingface.co/LoserCheems/doge-tiny-test)
+    model according to the specified arguments.
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -138,7 +138,6 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
-        num_labels=2,
         image_size=[512, 672],
         patch_size=16,
         num_channels=3,
@@ -149,7 +148,7 @@ class DogeConfig(PretrainedConfig):
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
-        max_position_embeddings=16384,
+        max_position_embeddings=2048,
         rope_theta=10000.0,
         rope_scaling=None,
         initializer_range=0.02,
@@ -160,19 +159,15 @@ class DogeConfig(PretrainedConfig):
         eos_token_id=2,
         tie_word_embeddings=False,
         num_attention_heads=8,
-        num_inner_values=8,
-        num_inner_value_heads=4,
-        num_value_per_head=4,
-        inner_values_retrieval_size=128,
         attention_dropout=0.0,
-        private_expert_retrieval_size=256,
+        is_moe=False,
         num_cdmmoe_experts=4096,
         num_cdmmoe_heads=4,
         num_cdmmoe_experts_per_head=8,
+        expert_retrieval_size=256,
         **kwargs,
     ):
         self.vocab_size = vocab_size
-        self.num_labels = num_labels
         self.image_size = image_size
         self.patch_size = patch_size
         self.num_channels = num_channels
@@ -194,15 +189,12 @@ class DogeConfig(PretrainedConfig):
         self.eos_token_id = eos_token_id
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
-        self.num_inner_values = num_inner_values
-        self.num_inner_value_heads = num_inner_value_heads
-        self.num_value_per_head = num_value_per_head
-        self.inner_values_retrieval_size = inner_values_retrieval_size
         self.attention_dropout = attention_dropout
-        self.private_expert_retrieval_size = private_expert_retrieval_size
+        self.is_moe = is_moe
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
         self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head
+        self.expert_retrieval_size = expert_retrieval_size
 
         # Validate the correctness of rotary position embeddings parameters
         # BC: if there is a 'type' field, copy it it to 'rope_type'.
@@ -215,6 +207,5 @@ class DogeConfig(PretrainedConfig):
             bos_token_id=bos_token_id,
             eos_token_id=eos_token_id,
             tie_word_embeddings=tie_word_embeddings,
-            num_labels=num_labels,
             **kwargs,
         )
