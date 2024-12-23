@@ -912,12 +912,12 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
 
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
+    
+    def get_decoder(self):
+        return self.model
 
     def set_decoder(self, decoder):
         self.model = decoder
-
-    def get_decoder(self):
-        return self.model
 
     @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
@@ -991,6 +991,109 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+
+class DogePatchEmbedding(nn.Module):
+    """
+    This class turns `pixel_values` of shape `(batch_size, num_channels, height, width)` into the initial
+    `hidden_states` of shape `(batch_size, seq_len, hidden_size)` to be consumed by a Transformer.
+    """
+
+    def __init__(self, config: DogeConfig):
+        super().__init__()
+
+        self.num_channels = config.num_channels
+        self.patch_size = config.patch_size
+        self.hidden_dim = config.hidden_size
+
+        self.sequence_proj = nn.Conv2d(self.num_channels, self.hidden_dim, kernel_size=self.patch_size, stride=self.patch_size)
+        self.state_proj = nn.Linear(self.hidden_dim, self.hidden_dim, bias=config.hidden_bias)
+
+    def forward(
+        self,
+        pixel_values: torch.Tensor,
+    ) -> torch.Tensor:
+        image_embedding = self.sequence_proj(pixel_values).flatten(2).transpose(1, 2)
+        image_embedding = self.state_proj(image_embedding)
+        return image_embedding
+
+
+class DogeForCausalVLM(DogePreTrainedModel, GenerationMixin):
+    _tied_weights_keys = ["lm_head.weight"]
+
+    def __init__(self, config: DogeConfig):
+        super().__init__(config)
+        self.config = config
+        self.pixel_embed = DogePatchEmbedding(config)
+        self.causal_model = DogeForCausalLM(config)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+    
+    def get_input_embeddings(self):
+        return self.causal_model.get_input_embeddings()
+    
+    def set_input_embeddings(self, value):
+        self.causal_model.set_input_embeddings(value)
+    
+    def get_output_embeddings(self):
+        return self.causal_model.get_output_embeddings()
+    
+    def set_output_embeddings(self, new_embeddings):
+        self.causal_model.set_output_embeddings(new_embeddings)
+
+    def get_decoder(self):
+        return self.causal_model.get_decoder()
+    
+    def set_decoder(self, decoder):
+        self.causal_model.set_decoder(decoder)
+    
+    def forward(
+        self,
+        input_ids: torch.LongTensor = None,
+        pixel_values: torch.FloatTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[torch.Tensor] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        num_logits_to_keep: int = 0,
+        **loss_kwargs,
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if input_ids is not None:
+            inputs_embeds = self.get_input_embeddings()(input_ids)
+        if pixel_values is not None:
+            pixel_embeds = self.pixel_embed(pixel_values)
+            if inputs_embeds is not None:
+                inputs_embeds = torch.cat([inputs_embeds, pixel_embeds], dim=1)
+        
+        outputs = self.causal_model(
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            labels=labels,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+            cache_position=cache_position,
+            num_logits_to_keep=num_logits_to_keep,
+            **loss_kwargs,
+        )
+
+        return outputs
 
 
 @add_start_docstrings(
