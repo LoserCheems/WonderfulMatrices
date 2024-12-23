@@ -25,7 +25,7 @@ from transformers.modeling_rope_utils import rope_config_validation
 class DogeConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`DogeModel`]. It is used to instantiate an Doge
-    model according to the specified arguments, defining the model architecture like [LoserCheems/doge-tiny-test](https://huggingface.co/LoserCheems/doge-tiny-test)
+    model according to the specified arguments, defining the model architecture like [JingzeShi/Doge-20M](https://huggingface.co/JingzeShi/Doge-20M).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -34,6 +34,10 @@ class DogeConfig(PretrainedConfig):
         vocab_size (`int`, *optional*, defaults to 32768):
             Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the
             `inputs_ids` passed when calling [`DogeModel`]
+        num_channels (`int`, *optional*, defaults to 3):
+            Number of channels in the input image.
+        patch_size (`int`, *optional*, defaults to 16):
+            Patch size of Vision Transformer Embeddings.
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
         intermediate_size (`int`, *optional*, defaults to 4096):
@@ -124,6 +128,8 @@ class DogeConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=32768,
+        num_channels=3,
+        patch_size=16,
         hidden_size=1024,
         intermediate_size=4096,
         num_hidden_layers=16,
@@ -150,6 +156,8 @@ class DogeConfig(PretrainedConfig):
         **kwargs,
     ):
         self.vocab_size = vocab_size
+        self.num_channels = num_channels
+        self.patch_size = patch_size
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
