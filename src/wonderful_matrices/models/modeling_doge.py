@@ -92,10 +92,10 @@ class RotaryEmbedding(nn.Module):
         super().__init__()
         self.rope_kwargs = {}
 
-        if config.rope_scaling is None:
-            self.rope_type = "default"
+        if config.rope_scaling is not None:
+            self.rope_type = config.rope_scaling.get("rope_type", config.rope_scaling.get("type"))
         else:
-            self.rope_type = config.rope_scaling
+            self.rope_type = "default"
         self.max_seq_len_cached = config.max_position_embeddings
         self.original_max_seq_len = config.max_position_embeddings
         self.base = config.rope_theta
@@ -133,6 +133,7 @@ class RotaryEmbedding(nn.Module):
         # core RoPE block
         inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
         position_ids_expanded = position_ids[:, None, :].float()
+        # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         with torch.autocast(device_type=device_type, enabled=False):
@@ -141,6 +142,7 @@ class RotaryEmbedding(nn.Module):
             cos = emb.cos()
             sin = emb.sin()
 
+        # Advanced RoPE types (e.g. yarn) apply a post-processing scaling factor, equivalent to scaling attention
         cos = cos * self.attention_scaling
         sin = sin * self.attention_scaling
 
@@ -183,6 +185,18 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+    """
+    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+    """
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+
+
 class DogeDynamicMaskAttention(nn.Module):
     """Dynamic Mask Attention from 'Wonderful Matrices' paper."""
 
@@ -199,40 +213,20 @@ class DogeDynamicMaskAttention(nn.Module):
             )
 
         self.hidden_dim = config.hidden_size
-        self.num_attention_heads = config.num_attention_heads
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_dim // self.num_heads
+        self.num_key_value_heads = config.num_key_value_heads
+        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.attention_dropout = config.attention_dropout
-        self.attention_head_dim = self.hidden_dim // self.num_attention_heads
 
         # Q K V O projections
-        self.q_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads * self.attention_head_dim,
-            bias=config.hidden_bias,
-        )
-        self.k_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads * self.attention_head_dim,
-            bias=config.hidden_bias,
-        )
+        self.q_proj = nn.Linear(self.hidden_dim, self.num_heads * self.head_dim, bias=config.hidden_bias)
+        self.k_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         # dynamic mask for the QK^T attention score matrix
-        self.A = nn.Parameter(
-            torch.ones(self.num_attention_heads)
-        )
-        self.dt_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads,
-            bias=config.hidden_bias,
-        )
-        self.v_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads * self.attention_head_dim,
-            bias=config.hidden_bias,
-        )
-        self.o_proj = nn.Linear(
-            self.hidden_dim,
-            self.hidden_dim,
-            bias=config.hidden_bias,
-        )
+        self.A = nn.Parameter(torch.ones(self.num_heads))
+        self.dt_proj = nn.Linear(self.hidden_dim, self.num_heads, bias=config.hidden_bias)
+        self.v_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
+        self.o_proj = nn.Linear(self.hidden_dim, self.hidden_dim, bias=config.hidden_bias)
 
     def forward(
         self,
@@ -250,15 +244,9 @@ class DogeDynamicMaskAttention(nn.Module):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
-            1, 2
-        )
-        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
-            1, 2
-        )
-        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
-            1, 2
-        )
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
 
         cos, sin = position_embeddings
         query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -267,6 +255,10 @@ class DogeDynamicMaskAttention(nn.Module):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        # repeat key and value states
+        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         # compute attention scores matrix
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
@@ -311,9 +303,9 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
 
         cos, sin = position_embeddings
         query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -322,7 +314,12 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        # repeat key and value states
+        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
 
+        causal_mask = attention_mask
         if attention_mask is not None:
             dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
             dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
@@ -333,12 +330,17 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         key_states = key_states.contiguous()
         value_states = value_states.contiguous()
 
+        # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
+        # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
+        is_causal = True if causal_mask is None and q_len > 1 else False
+
         attn_output = F.scaled_dot_product_attention(
             query_states,
             key_states,
             value_states,
             attn_mask=causal_mask,
-            dropout_p=self.attention_dropout,
+            dropout_p=self.attention_dropout if self.training else 0.0,
+            is_causal=is_causal,
         )
 
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -468,13 +470,13 @@ class DogeDecoderLayer(nn.Module):
         super().__init__()
         self.hidden_dropout = config.hidden_dropout
 
-        self.pre_sequence_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
-        self.post_sequence_residual = Residual(config.hidden_size)
+        self.pre_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.self_attn = DOGE_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
+        self.pre_residual = Residual(config.hidden_size)
 
-        self.pre_state_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.feed_forward = DogeMLP(config) if config.is_moe == False else DogeCDMoE(config)
-        self.post_state_residual = Residual(config.hidden_size)
+        self.post_residual = Residual(config.hidden_size)
 
     def forward(
         self,
@@ -513,8 +515,8 @@ class DogeDecoderLayer(nn.Module):
 
         # sequence transformation
         residual = hidden_states
-        hidden_states = self.pre_sequence_layernorm(hidden_states)
-        hidden_states, present_key_value = self.attn(
+        hidden_states = self.pre_layernorm(hidden_states)
+        hidden_states, present_key_value = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -525,14 +527,14 @@ class DogeDecoderLayer(nn.Module):
         )
         self_attn_weights = None
         hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
-        hidden_states = self.post_sequence_residual(residual, hidden_states)
+        hidden_states = self.pre_residual(residual, hidden_states)
 
         # state transformation
         residual = hidden_states
-        hidden_states = self.pre_state_layernorm(hidden_states)
+        hidden_states = self.post_layernorm(hidden_states)
         hidden_states = self.feed_forward(hidden_states)
         hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
-        hidden_states = self.post_state_residual(residual, hidden_states)
+        hidden_states = self.post_residual(residual, hidden_states)
 
         outputs = (hidden_states,)
 

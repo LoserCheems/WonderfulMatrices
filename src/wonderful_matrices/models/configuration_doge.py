@@ -108,6 +108,14 @@ class DogeConfig(PretrainedConfig):
             Whether to tie weight embeddings
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
+        num_key_value_heads (`int`, *optional*, defaults to `None`):
+            This is the number of key_value heads that should be used to implement Grouped Query Attention. If
+            `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
+            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
+            by meanpooling all the original heads within that group. For more details checkout [this
+            paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
+            `num_attention_heads`.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
         is_moe (`bool`, *optional*, defaults to `False`):
@@ -147,6 +155,7 @@ class DogeConfig(PretrainedConfig):
         eos_token_id=2,
         tie_word_embeddings=True,
         num_attention_heads=8,
+        num_key_value_heads=None,
         attention_dropout=0.0,
         is_moe=False,
         num_cdmmoe_experts=2048,
@@ -175,6 +184,7 @@ class DogeConfig(PretrainedConfig):
         self.eos_token_id = eos_token_id
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
+        self.num_key_value_heads = num_key_value_heads
         self.attention_dropout = attention_dropout
         self.is_moe = is_moe
         self.num_cdmmoe_experts = num_cdmmoe_experts
