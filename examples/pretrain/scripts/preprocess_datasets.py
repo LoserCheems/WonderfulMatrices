@@ -156,7 +156,7 @@ def main(args):
 
     # 处理FineMath
     # Process FineMath
-    dataset = load_from_disk(args.datasets_dir + '/fine-math')
+    dataset = load_from_disk(args.datasets_dir + '/finemath')
     column_names = dataset.column_names
     dataset = dataset.select(
         range(fine_math_train_size + fine_math_test_size)
@@ -169,10 +169,10 @@ def main(args):
         num_proc=args.num_proc,
         remove_columns=column_names,
         batched=True,
-        desc="Processing open-web-math"
+        desc="Processing finemath"
     )
     print(dataset)
-    dataset.save_to_disk(args.save_dir + '/fine-math_processed')
+    dataset.save_to_disk(args.save_dir + '/finemath_processed')
 
 if __name__ == '__main__':
     argparser = ArgumentParser()

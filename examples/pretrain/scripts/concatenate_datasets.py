@@ -8,7 +8,7 @@ def main(args):
     fineweb_edu_dataset = load_from_disk(args.datasets_dir + '/fineweb-edu_processed')
     cosmopedia_v2_dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2_processed')
     python_edu_dataset = load_from_disk(args.datasets_dir + '/python-edu_processed')
-    fine_math_dataset = load_from_disk(args.datasets_dir + '/fine-math_processed')
+    fine_math_dataset = load_from_disk(args.datasets_dir + '/finemath_processed')
     dataset : Dataset = concatenate_datasets([
         fineweb_edu_dataset,
         cosmopedia_v2_dataset,
