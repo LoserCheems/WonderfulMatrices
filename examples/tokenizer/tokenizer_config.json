@@ -17,22 +17,6 @@
       "special": true
     },
     "2": {
-      "content": "<|reserved_special_token_0|>",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "3": {
-      "content": "<|reserved_special_token_1|>",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "4": {
       "content": "<|finetune_right_pad_id|>",
       "lstrip": false,
       "normalized": false,
@@ -40,15 +24,7 @@
       "single_word": false,
       "special": true
     },
-    "5": {
-      "content": "<|reserved_special_token_2|>",
-      "lstrip": false,
-      "normalized": false,
-      "rstrip": false,
-      "single_word": false,
-      "special": true
-    },
-    "6": {
+    "3": {
       "content": "<|start_header_id|>",
       "lstrip": false,
       "normalized": false,
@@ -56,7 +32,7 @@
       "single_word": false,
       "special": true
     },
-    "7": {
+    "4": {
       "content": "<|end_header_id|>",
       "lstrip": false,
       "normalized": false,
@@ -64,7 +40,7 @@
       "single_word": false,
       "special": true
     },
-    "8": {
+    "5": {
       "content": "<|eom_id|>",
       "lstrip": false,
       "normalized": false,
@@ -72,7 +48,7 @@
       "single_word": false,
       "special": true
     },
-    "9": {
+    "6": {
       "content": "<|eot_id|>",
       "lstrip": false,
       "normalized": false,
@@ -80,8 +56,32 @@
       "single_word": false,
       "special": true
     },
-    "10": {
+    "7": {
       "content": "<|python_tag|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "8": {
+      "content": "<|reserved_special_token_0|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "9": {
+      "content": "<|reserved_special_token_1|>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "10": {
+      "content": "<|reserved_special_token_2|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
