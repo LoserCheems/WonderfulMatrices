@@ -40,9 +40,9 @@ class DogeConfig(PretrainedConfig):
             Patch size of Vision Transformer Embeddings.
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
-        intermediate_size (`int`, *optional*, defaults to 4096):
+        intermediate_size (`int`, *optional*, defaults to 2048):
             Dimension of the CDMoE representations.
-        num_hidden_layers (`int`, *optional*, defaults to 16):
+        num_hidden_layers (`int`, *optional*, defaults to 32):
             Number of hidden layers in the Transformer decoder.
         hidden_bias (`bool`, *optional*, defaults to `False`):
             Whether to use bias in the hidden layers.
@@ -104,7 +104,7 @@ class DogeConfig(PretrainedConfig):
             Beginning of stream token id.
         eos_token_id (`int`, *optional*, defaults to 2):
             End of stream token id.
-        tie_word_embeddings (`bool`, *optional*, defaults to `False`):
+        tie_word_embeddings (`bool`, *optional*, defaults to `True`):
             Whether to tie weight embeddings
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
@@ -112,11 +112,11 @@ class DogeConfig(PretrainedConfig):
             The dropout ratio for the attention probabilities.
         is_moe (`bool`, *optional*, defaults to `False`):
             Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize
-        num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
+        num_cdmmoe_experts (`int`, *optional*, defaults to 2048):
             Number of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_heads (`int`, *optional*, defaults to 4):
+        num_cdmmoe_heads (`int`, *optional*, defaults to 2):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
+        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 4):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
         expert_retrieval_size (`int`, *optional*, defaults to 256):
             Dimension of the Expert retrieval states for the Cross Domain Mixture of Experts.
@@ -131,8 +131,8 @@ class DogeConfig(PretrainedConfig):
         num_channels=3,
         patch_size=16,
         hidden_size=1024,
-        intermediate_size=4096,
-        num_hidden_layers=16,
+        intermediate_size=2048,
+        num_hidden_layers=32,
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
@@ -145,13 +145,13 @@ class DogeConfig(PretrainedConfig):
         pad_token_id=0,
         bos_token_id=1,
         eos_token_id=2,
-        tie_word_embeddings=False,
+        tie_word_embeddings=True,
         num_attention_heads=8,
         attention_dropout=0.0,
         is_moe=False,
-        num_cdmmoe_experts=4096,
-        num_cdmmoe_heads=4,
-        num_cdmmoe_experts_per_head=8,
+        num_cdmmoe_experts=2048,
+        num_cdmmoe_heads=2,
+        num_cdmmoe_experts_per_head=4,
         expert_retrieval_size=256,
         **kwargs,
     ):
