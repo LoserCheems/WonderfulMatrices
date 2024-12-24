@@ -50,12 +50,6 @@ def main(args):
     # Load dataset
     ################################
     dataset = datasets.load_from_disk(hyperparameters['training_args']['dataset_path'])
-    if hyperparameters['training_args']['per_epoch_max_steps'] != -1:
-        # 这样截断的目的是, 指定固定的训练步数, 进行多轮次训练.
-        # The purpose of truncating like this is to specify a fixed number of training steps for multiple epochs.
-        # 如果进行多节点训练, 需要自行在配置文件中将batch_size * gradient_accumulation_steps / world_size
-        # If multi-node training is performed, you need to manually set batch_size * gradient_accumulation_steps / world_size in the configuration file
-        dataset["train"] = dataset["train"].select(range(hyperparameters['training_args']['per_epoch_max_steps'] * hyperparameters['training_args']['per_device_train_batch_size'] * hyperparameters['training_args']['gradient_accumulation_steps']))
     logger.info(
         f"Training dataset: {len(dataset['train'])} samples, Evaluation dataset: {len(dataset['test'])} samples."
     )
@@ -95,7 +89,7 @@ def main(args):
         # 训练轮次与每个设备的批次
         # Training epochs and per device batch size
         do_train=True,
-        num_train_epochs=hyperparameters['training_args']['num_train_epochs'],
+        max_steps=hyperparameters['training_args']['max_train_steps'],
         per_device_train_batch_size=hyperparameters['training_args']['per_device_train_batch_size'],
 
         # 评估策略与评估步数
@@ -111,9 +105,6 @@ def main(args):
         warmup_ratio=hyperparameters['training_args']['warmup_ratio'],
         lr_scheduler_type="cosine_with_min_lr",
         lr_scheduler_kwargs={'min_lr_rate': hyperparameters['training_args']['min_lr_rate']},
-        adam_beta1=hyperparameters['training_args']['adam_beta1'],
-        adam_beta2=hyperparameters['training_args']['adam_beta2'],
-        adam_epsilon=hyperparameters['training_args']['adam_epsilon'],
         weight_decay=hyperparameters['training_args']['weight_decay'],
 
         # 保存策略
