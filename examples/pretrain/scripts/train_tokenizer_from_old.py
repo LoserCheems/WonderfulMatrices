@@ -12,18 +12,18 @@ def example_cosmopedia_v2(example):
 def example_python_edu(example):
     return {"examples": example["text"]}
 
-def example_open_web_math(example):
+def example_fine_math(example):
     return {"examples": example["text"]}
 
 def main(args):
 
-    # 计算fineweb-edu, cosmopedia-v2, python-edu, open-web-math的大小
-    # Calculate the size of fineweb-edu, cosmopedia-v2, python-edu, open-web-math
-    fineweb_edu_ratio, cosmopedia_v2_ratio, python_edu_ratio, open_web_math_ratio = 0.7, 0.2, 0.05, 0.05
+    # 计算fineweb-edu, cosmopedia-v2, python-edu, fine-math的大小
+    # Calculate the size of fineweb-edu, cosmopedia-v2, python-edu, fine-math
+    fineweb_edu_ratio, cosmopedia_v2_ratio, python_edu_ratio, fine_math_ratio = 0.7, 0.2, 0.05, 0.05
     fineweb_edu_size = int(args.num_examples * fineweb_edu_ratio)
     cosmopedia_v2_size = int(args.num_examples * cosmopedia_v2_ratio)
     python_edu_size = int(args.num_examples * python_edu_ratio)
-    open_web_math_size = int(args.num_examples * open_web_math_ratio)
+    fine_math_size = int(args.num_examples * fine_math_ratio)
 
     # 采样 fineweb-edu
     # Sample fineweb-edu
@@ -73,22 +73,22 @@ def main(args):
 
     # 采样 open-web-math
     # Sample open-web-math
-    open_web_math = load_from_disk(args.datasets_dir + '/open-web-math')
-    open_web_math = open_web_math.shuffle(seed=233)
-    column_names = open_web_math.column_names
-    open_web_math = open_web_math.select(
-        range(open_web_math_size)
+    fine_math = load_from_disk(args.datasets_dir + '/finemath')
+    fine_math = fine_math.shuffle(seed=233)
+    column_names = fine_math.column_names
+    fine_math = fine_math.select(
+        range(fine_math_size)
     ).map(
-        example_open_web_math, 
+        example_fine_math, 
         fn_kwargs={},
         num_proc=args.num_proc,
         remove_columns=column_names,
-        desc="Sampling open-web-math"
+        desc="Sampling fine-math"
     )
 
     # 合并样本
     # Concatenate samples
-    dataset = concatenate_datasets([fineweb_edu, cosmopedia_v2, python_edu, open_web_math])
+    dataset = concatenate_datasets([fineweb_edu, cosmopedia_v2, python_edu, fine_math])
     dataset.save_to_disk(args.datasets_dir + './datasets/tokenizer_examples')
 
     dataset = load_from_disk(args.datasets_dir + '/tokenizer_examples')
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--old_tokenizer_path", type=str, default="./examples/tokenizer")
     argparser.add_argument("--new_tokenizer_save_dir", type=str, default="./examples/tokenizer_new")
-    argparser.add_argument("--num_examples", type=int, default=1_000_000)
+    argparser.add_argument("--num_examples", type=int, default=10_000_000)
     argparser.add_argument("--num_proc", type=int, default=8)
     args = argparser.parse_args()
 
