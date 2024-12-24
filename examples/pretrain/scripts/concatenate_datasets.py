@@ -22,7 +22,7 @@ def main(args):
 
     # 保存数据集
     # Save dataset
-    dataset.save_to_disk(args.save_dir + "/pretrain_dataset", num_proc=args.num_proc, num_shards={'train': 1024, 'test': 1 })
+    dataset.save_to_disk(args.save_dir + "/pretrain_dataset", num_proc=args.num_proc, num_shards={'train': 128_000, 'test': 1 })
 
 
 if __name__ == '__main__':
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     argparser = ArgumentParser()
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
-    argparser.add_argument("--train_examples", type=int, default=81_920_000)
+    argparser.add_argument("--train_examples", type=int, default=128_000_000)
     argparser.add_argument("--test_examples", type=int, default=1_000)
     argparser.add_argument("--num_proc", type=int, default=8)
     args = argparser.parse_args()

@@ -98,8 +98,8 @@ def main(args):
     # Process fineweb-edu
     dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233).select(
-        range(fineweb_edu_train_size + fineweb_edu_test_size)
+    dataset = dataset.select(
+        range(fineweb_edu_train_size + fineweb_edu_test_size - 1, -1, -1)
     ).map(
         process_fineweb_edu, 
         fn_kwargs={
@@ -119,7 +119,7 @@ def main(args):
     dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2')
     column_names = dataset.column_names
 
-    dataset = dataset.shuffle(seed=233).select(
+    dataset = dataset.select(
         range(cosmopedia_v2_train_size + cosmopedia_v2_test_size)
     ).map(
         process_cosmopedia, 
@@ -138,7 +138,7 @@ def main(args):
     # Process Python Education
     dataset = load_from_disk(args.datasets_dir + '/python-edu')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233).select(
+    dataset = dataset.select(
         range(python_edu_train_size + python_edu_test_size)
     ).map(
         process_python_edu, 
@@ -158,7 +158,7 @@ def main(args):
     # Process FineMath
     dataset = load_from_disk(args.datasets_dir + '/fine-math')
     column_names = dataset.column_names
-    dataset = dataset.shuffle(seed=233).select(
+    dataset = dataset.select(
         range(fine_math_train_size + fine_math_test_size)
     ).map(
         process_fine_math,
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
     argparser.add_argument("--tokenizer_path", type=str, default="./examples/tokenizer")
-    argparser.add_argument("--train_examples", type=int, default=81_920_000)
+    argparser.add_argument("--train_examples", type=int, default=128_000_000)
     argparser.add_argument("--test_examples", type=int, default=1_000)
     argparser.add_argument("--max_length", type=int, default=2048)
     argparser.add_argument("--num_proc", type=int, default=1)
