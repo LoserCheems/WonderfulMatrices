@@ -1,8 +1,8 @@
 model_config:
   vocab_size: 32768
   hidden_size: 256
-  intermediate_size: 1024
-  num_hidden_layers: 4
+  intermediate_size: 512
+  num_hidden_layers: 8
   hidden_bias: False
   hidden_dropout: 0.0
   hidden_act: "silu"
@@ -24,7 +24,7 @@ training_args:
   do_eval: True
   eval_steps: 100
   per_device_eval_batch_size: 1
-  learning_rate: 0.0008
+  learning_rate: 0.008
   warmup_ratio: 0.1
   min_lr_rate: 0.1
   weight_decay: 0.01
