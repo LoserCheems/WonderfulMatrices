@@ -47,19 +47,19 @@ def download_python_edu(save_dir, cache_dir, num_proc):
     print(dataset)
     dataset.save_to_disk(save_dir + "/python-edu", num_proc=num_proc)
 
-# 下载开放网络数学数据集
-# Download Open Web Math dataset
-def download_open_web_math(save_dir, cache_dir, num_proc):
-    dataset = load_dataset("open-web-math/open-web-math", split="train", num_proc=num_proc, cache_dir=cache_dir)
+# 下载 FineMath 数据集
+# Download FineMath dataset
+def download_fine_math(save_dir, cache_dir, num_proc):
+    dataset = load_dataset("HuggingFaceTB/finemath", "finemath-4plus", split="train", num_proc=num_proc, cache_dir=cache_dir)
     print(dataset)
-    dataset.save_to_disk(save_dir + "/open-web-math", num_proc=num_proc)
+    dataset.save_to_disk(save_dir + "/finemath", num_proc=num_proc)
 
 
 def main(args):
     download_fineweb_edu(args.save_dir, args.cache_dir, args.num_proc)
     download_cosmopedia_v2(args.save_dir, args.cache_dir, args.num_proc)
     download_python_edu(args.save_dir, args.cache_dir, args.num_proc)
-    download_open_web_math(args.save_dir, args.cache_dir, args.num_proc)
+    download_fine_math(args.save_dir, args.cache_dir, args.num_proc)
 
 
 if __name__ == "__main__":

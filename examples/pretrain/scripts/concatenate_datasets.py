@@ -8,12 +8,12 @@ def main(args):
     fineweb_edu_dataset = load_from_disk(args.datasets_dir + '/fineweb-edu_processed')
     cosmopedia_v2_dataset = load_from_disk(args.datasets_dir + '/cosmopedia-v2_processed')
     python_edu_dataset = load_from_disk(args.datasets_dir + '/python-edu_processed')
-    open_web_math_dataset = load_from_disk(args.datasets_dir + '/open-web-math_processed')
+    fine_math_dataset = load_from_disk(args.datasets_dir + '/fine-math_processed')
     dataset : Dataset = concatenate_datasets([
         fineweb_edu_dataset,
         cosmopedia_v2_dataset,
         python_edu_dataset,
-        open_web_math_dataset
+        fine_math_dataset
     ])
 
     # 拆分训练集与测试集并打乱

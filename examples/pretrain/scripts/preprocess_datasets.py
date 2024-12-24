@@ -57,7 +57,7 @@ def process_python_edu(example, tokenizer, max_length=2048):
         'attention_mask': outputs['attention_mask'],
     }
 
-def process_open_web_math(example, tokenizer, max_length=2048):
+def process_fine_math(example, tokenizer, max_length=2048):
     text = example['text']
     outputs = tokenizer(
         text,
@@ -75,19 +75,19 @@ def process_open_web_math(example, tokenizer, max_length=2048):
 
 def main(args):
 
-    # 计算fineweb-edu, cosmopedia-v2, python-edu, open-web-math的大小
-    # Calculate the size of fineweb-edu, cosmopedia-v2, python-edu, open-web-math
-    fineweb_edu_ratio, cosmopedia_v2_ratio, python_edu_ratio, open_web_math_ratio = 0.7, 0.2, 0.05, 0.05
+    # 计算fineweb-edu, cosmopedia-v2, python-edu, fine-math的大小
+    # Calculate the size of fineweb-edu, cosmopedia-v2, python-edu, fine-math
+    fineweb_edu_ratio, cosmopedia_v2_ratio, python_edu_ratio, fine_math_ratio = 0.7, 0.2, 0.05, 0.05
 
     fineweb_edu_train_size = int(args.train_examples * fineweb_edu_ratio)
     cosmopedia_v2_train_size = int(args.train_examples * cosmopedia_v2_ratio)
     python_edu_train_size = int(args.train_examples * python_edu_ratio)
-    open_web_math_train_size = int(args.train_examples * open_web_math_ratio)
+    fine_math_train_size = int(args.train_examples * fine_math_ratio)
 
     fineweb_edu_test_size = int(args.test_examples * fineweb_edu_ratio)
     cosmopedia_v2_test_size = int(args.test_examples * cosmopedia_v2_ratio)
     python_edu_test_size = int(args.test_examples * python_edu_ratio)
-    open_web_math_test_size = int(args.test_examples * open_web_math_ratio)
+    fine_math_test_size = int(args.test_examples * fine_math_ratio)
 
 
     # 加载分词器
@@ -154,14 +154,14 @@ def main(args):
     print(dataset)
     dataset.save_to_disk(args.save_dir + '/python-edu_processed')
 
-    # 处理开放网络数学
-    # Process Open Web Math
-    dataset = load_from_disk(args.datasets_dir + '/open-web-math')
+    # 处理FineMath
+    # Process FineMath
+    dataset = load_from_disk(args.datasets_dir + '/fine-math')
     column_names = dataset.column_names
     dataset = dataset.shuffle(seed=233).select(
-        range(open_web_math_train_size + open_web_math_test_size)
+        range(fine_math_train_size + fine_math_test_size)
     ).map(
-        process_open_web_math, 
+        process_fine_math,
         fn_kwargs={
             'tokenizer': tokenizer,
             'max_length': args.max_length
@@ -172,7 +172,7 @@ def main(args):
         desc="Processing open-web-math"
     )
     print(dataset)
-    dataset.save_to_disk(args.save_dir + '/open-web-math_processed')
+    dataset.save_to_disk(args.save_dir + '/fine-math_processed')
 
 if __name__ == '__main__':
     argparser = ArgumentParser()
