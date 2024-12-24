@@ -1,27 +1,20 @@
 {
   "bos_token": {
-    "content": "<s>",
+    "content": "<|begin_of_text|>",
     "lstrip": false,
     "normalized": false,
     "rstrip": false,
     "single_word": false
   },
   "eos_token": {
-    "content": "</s>",
+    "content": "<|eot_id|>",
     "lstrip": false,
     "normalized": false,
     "rstrip": false,
     "single_word": false
   },
   "pad_token": {
-    "content": "<unk>",
-    "lstrip": false,
-    "normalized": false,
-    "rstrip": false,
-    "single_word": false
-  },
-  "unk_token": {
-    "content": "<unk>",
+    "content": "<|finetune_right_pad_id|>",
     "lstrip": false,
     "normalized": false,
     "rstrip": false,
