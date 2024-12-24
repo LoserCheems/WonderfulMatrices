@@ -1,6 +1,6 @@
 {
   "added_tokens_decoder": {
-    "128000": {
+    "0": {
       "content": "<|begin_of_text|>",
       "lstrip": false,
       "normalized": false,
@@ -8,7 +8,7 @@
       "single_word": false,
       "special": true
     },
-    "128001": {
+    "1": {
       "content": "<|end_of_text|>",
       "lstrip": false,
       "normalized": false,
@@ -16,7 +16,7 @@
       "single_word": false,
       "special": true
     },
-    "128002": {
+    "2": {
       "content": "<|reserved_special_token_0|>",
       "lstrip": false,
       "normalized": false,
@@ -24,7 +24,7 @@
       "single_word": false,
       "special": true
     },
-    "128003": {
+    "3": {
       "content": "<|reserved_special_token_1|>",
       "lstrip": false,
       "normalized": false,
@@ -32,7 +32,7 @@
       "single_word": false,
       "special": true
     },
-    "128004": {
+    "4": {
       "content": "<|finetune_right_pad_id|>",
       "lstrip": false,
       "normalized": false,
@@ -40,7 +40,7 @@
       "single_word": false,
       "special": true
     },
-    "128005": {
+    "5": {
       "content": "<|reserved_special_token_2|>",
       "lstrip": false,
       "normalized": false,
@@ -48,7 +48,7 @@
       "single_word": false,
       "special": true
     },
-    "128006": {
+    "6": {
       "content": "<|start_header_id|>",
       "lstrip": false,
       "normalized": false,
@@ -56,7 +56,7 @@
       "single_word": false,
       "special": true
     },
-    "128007": {
+    "7": {
       "content": "<|end_header_id|>",
       "lstrip": false,
       "normalized": false,
@@ -64,7 +64,7 @@
       "single_word": false,
       "special": true
     },
-    "128008": {
+    "8": {
       "content": "<|eom_id|>",
       "lstrip": false,
       "normalized": false,
@@ -72,7 +72,7 @@
       "single_word": false,
       "special": true
     },
-    "128009": {
+    "9": {
       "content": "<|eot_id|>",
       "lstrip": false,
       "normalized": false,
@@ -80,7 +80,7 @@
       "single_word": false,
       "special": true
     },
-    "128010": {
+    "10": {
       "content": "<|python_tag|>",
       "lstrip": false,
       "normalized": false,
@@ -88,7 +88,7 @@
       "single_word": false,
       "special": true
     },
-    "128011": {
+    "11": {
       "content": "<|reserved_special_token_3|>",
       "lstrip": false,
       "normalized": false,
@@ -96,7 +96,7 @@
       "single_word": false,
       "special": true
     },
-    "128012": {
+    "12": {
       "content": "<|reserved_special_token_4|>",
       "lstrip": false,
       "normalized": false,
@@ -104,7 +104,7 @@
       "single_word": false,
       "special": true
     },
-    "128013": {
+    "13": {
       "content": "<|reserved_special_token_5|>",
       "lstrip": false,
       "normalized": false,
@@ -112,7 +112,7 @@
       "single_word": false,
       "special": true
     },
-    "128014": {
+    "14": {
       "content": "<|reserved_special_token_6|>",
       "lstrip": false,
       "normalized": false,
@@ -120,7 +120,7 @@
       "single_word": false,
       "special": true
     },
-    "128015": {
+    "15": {
       "content": "<|reserved_special_token_7|>",
       "lstrip": false,
       "normalized": false,
@@ -128,7 +128,7 @@
       "single_word": false,
       "special": true
     },
-    "128016": {
+    "16": {
       "content": "<|reserved_special_token_8|>",
       "lstrip": false,
       "normalized": false,
@@ -136,7 +136,7 @@
       "single_word": false,
       "special": true
     },
-    "128017": {
+    "17": {
       "content": "<|reserved_special_token_9|>",
       "lstrip": false,
       "normalized": false,
@@ -144,7 +144,7 @@
       "single_word": false,
       "special": true
     },
-    "128018": {
+    "18": {
       "content": "<|reserved_special_token_10|>",
       "lstrip": false,
       "normalized": false,
@@ -152,7 +152,7 @@
       "single_word": false,
       "special": true
     },
-    "128019": {
+    "19": {
       "content": "<|reserved_special_token_11|>",
       "lstrip": false,
       "normalized": false,
@@ -160,7 +160,7 @@
       "single_word": false,
       "special": true
     },
-    "128020": {
+    "20": {
       "content": "<|reserved_special_token_12|>",
       "lstrip": false,
       "normalized": false,
@@ -168,7 +168,7 @@
       "single_word": false,
       "special": true
     },
-    "128021": {
+    "21": {
       "content": "<|reserved_special_token_13|>",
       "lstrip": false,
       "normalized": false,
@@ -176,7 +176,7 @@
       "single_word": false,
       "special": true
     },
-    "128022": {
+    "22": {
       "content": "<|reserved_special_token_14|>",
       "lstrip": false,
       "normalized": false,
@@ -184,7 +184,7 @@
       "single_word": false,
       "special": true
     },
-    "128023": {
+    "23": {
       "content": "<|reserved_special_token_15|>",
       "lstrip": false,
       "normalized": false,
@@ -192,7 +192,7 @@
       "single_word": false,
       "special": true
     },
-    "128024": {
+    "24": {
       "content": "<|reserved_special_token_16|>",
       "lstrip": false,
       "normalized": false,
@@ -200,7 +200,7 @@
       "single_word": false,
       "special": true
     },
-    "128025": {
+    "25": {
       "content": "<|reserved_special_token_17|>",
       "lstrip": false,
       "normalized": false,
@@ -208,7 +208,7 @@
       "single_word": false,
       "special": true
     },
-    "128026": {
+    "26": {
       "content": "<|reserved_special_token_18|>",
       "lstrip": false,
       "normalized": false,
@@ -216,7 +216,7 @@
       "single_word": false,
       "special": true
     },
-    "128027": {
+    "27": {
       "content": "<|reserved_special_token_19|>",
       "lstrip": false,
       "normalized": false,
@@ -224,7 +224,7 @@
       "single_word": false,
       "special": true
     },
-    "128028": {
+    "28": {
       "content": "<|reserved_special_token_20|>",
       "lstrip": false,
       "normalized": false,
@@ -232,7 +232,7 @@
       "single_word": false,
       "special": true
     },
-    "128029": {
+    "29": {
       "content": "<|reserved_special_token_21|>",
       "lstrip": false,
       "normalized": false,
@@ -240,7 +240,7 @@
       "single_word": false,
       "special": true
     },
-    "128030": {
+    "30": {
       "content": "<|reserved_special_token_22|>",
       "lstrip": false,
       "normalized": false,
@@ -248,7 +248,7 @@
       "single_word": false,
       "special": true
     },
-    "128031": {
+    "31": {
       "content": "<|reserved_special_token_23|>",
       "lstrip": false,
       "normalized": false,
@@ -256,7 +256,7 @@
       "single_word": false,
       "special": true
     },
-    "128032": {
+    "32": {
       "content": "<|reserved_special_token_24|>",
       "lstrip": false,
       "normalized": false,
@@ -264,7 +264,7 @@
       "single_word": false,
       "special": true
     },
-    "128033": {
+    "33": {
       "content": "<|reserved_special_token_25|>",
       "lstrip": false,
       "normalized": false,
@@ -272,7 +272,7 @@
       "single_word": false,
       "special": true
     },
-    "128034": {
+    "34": {
       "content": "<|reserved_special_token_26|>",
       "lstrip": false,
       "normalized": false,
@@ -280,7 +280,7 @@
       "single_word": false,
       "special": true
     },
-    "128035": {
+    "35": {
       "content": "<|reserved_special_token_27|>",
       "lstrip": false,
       "normalized": false,
@@ -288,7 +288,7 @@
       "single_word": false,
       "special": true
     },
-    "128036": {
+    "36": {
       "content": "<|reserved_special_token_28|>",
       "lstrip": false,
       "normalized": false,
@@ -296,7 +296,7 @@
       "single_word": false,
       "special": true
     },
-    "128037": {
+    "37": {
       "content": "<|reserved_special_token_29|>",
       "lstrip": false,
       "normalized": false,
@@ -304,7 +304,7 @@
       "single_word": false,
       "special": true
     },
-    "128038": {
+    "38": {
       "content": "<|reserved_special_token_30|>",
       "lstrip": false,
       "normalized": false,
@@ -312,7 +312,7 @@
       "single_word": false,
       "special": true
     },
-    "128039": {
+    "39": {
       "content": "<|reserved_special_token_31|>",
       "lstrip": false,
       "normalized": false,
@@ -320,7 +320,7 @@
       "single_word": false,
       "special": true
     },
-    "128040": {
+    "40": {
       "content": "<|reserved_special_token_32|>",
       "lstrip": false,
       "normalized": false,
@@ -328,7 +328,7 @@
       "single_word": false,
       "special": true
     },
-    "128041": {
+    "41": {
       "content": "<|reserved_special_token_33|>",
       "lstrip": false,
       "normalized": false,
@@ -336,7 +336,7 @@
       "single_word": false,
       "special": true
     },
-    "128042": {
+    "42": {
       "content": "<|reserved_special_token_34|>",
       "lstrip": false,
       "normalized": false,
@@ -344,7 +344,7 @@
       "single_word": false,
       "special": true
     },
-    "128043": {
+    "43": {
       "content": "<|reserved_special_token_35|>",
       "lstrip": false,
       "normalized": false,
@@ -352,7 +352,7 @@
       "single_word": false,
       "special": true
     },
-    "128044": {
+    "44": {
       "content": "<|reserved_special_token_36|>",
       "lstrip": false,
       "normalized": false,
@@ -360,7 +360,7 @@
       "single_word": false,
       "special": true
     },
-    "128045": {
+    "45": {
       "content": "<|reserved_special_token_37|>",
       "lstrip": false,
       "normalized": false,
@@ -368,7 +368,7 @@
       "single_word": false,
       "special": true
     },
-    "128046": {
+    "46": {
       "content": "<|reserved_special_token_38|>",
       "lstrip": false,
       "normalized": false,
@@ -376,7 +376,7 @@
       "single_word": false,
       "special": true
     },
-    "128047": {
+    "47": {
       "content": "<|reserved_special_token_39|>",
       "lstrip": false,
       "normalized": false,
@@ -384,7 +384,7 @@
       "single_word": false,
       "special": true
     },
-    "128048": {
+    "48": {
       "content": "<|reserved_special_token_40|>",
       "lstrip": false,
       "normalized": false,
@@ -392,7 +392,7 @@
       "single_word": false,
       "special": true
     },
-    "128049": {
+    "49": {
       "content": "<|reserved_special_token_41|>",
       "lstrip": false,
       "normalized": false,
@@ -400,7 +400,7 @@
       "single_word": false,
       "special": true
     },
-    "128050": {
+    "50": {
       "content": "<|reserved_special_token_42|>",
       "lstrip": false,
       "normalized": false,
@@ -408,7 +408,7 @@
       "single_word": false,
       "special": true
     },
-    "128051": {
+    "51": {
       "content": "<|reserved_special_token_43|>",
       "lstrip": false,
       "normalized": false,
@@ -416,7 +416,7 @@
       "single_word": false,
       "special": true
     },
-    "128052": {
+    "52": {
       "content": "<|reserved_special_token_44|>",
       "lstrip": false,
       "normalized": false,
@@ -424,7 +424,7 @@
       "single_word": false,
       "special": true
     },
-    "128053": {
+    "53": {
       "content": "<|reserved_special_token_45|>",
       "lstrip": false,
       "normalized": false,
@@ -432,7 +432,7 @@
       "single_word": false,
       "special": true
     },
-    "128054": {
+    "54": {
       "content": "<|reserved_special_token_46|>",
       "lstrip": false,
       "normalized": false,
@@ -440,7 +440,7 @@
       "single_word": false,
       "special": true
     },
-    "128055": {
+    "55": {
       "content": "<|reserved_special_token_47|>",
       "lstrip": false,
       "normalized": false,
@@ -448,7 +448,7 @@
       "single_word": false,
       "special": true
     },
-    "128056": {
+    "56": {
       "content": "<|reserved_special_token_48|>",
       "lstrip": false,
       "normalized": false,
@@ -456,7 +456,7 @@
       "single_word": false,
       "special": true
     },
-    "128057": {
+    "57": {
       "content": "<|reserved_special_token_49|>",
       "lstrip": false,
       "normalized": false,
@@ -464,7 +464,7 @@
       "single_word": false,
       "special": true
     },
-    "128058": {
+    "58": {
       "content": "<|reserved_special_token_50|>",
       "lstrip": false,
       "normalized": false,
@@ -472,7 +472,7 @@
       "single_word": false,
       "special": true
     },
-    "128059": {
+    "59": {
       "content": "<|reserved_special_token_51|>",
       "lstrip": false,
       "normalized": false,
@@ -480,7 +480,7 @@
       "single_word": false,
       "special": true
     },
-    "128060": {
+    "60": {
       "content": "<|reserved_special_token_52|>",
       "lstrip": false,
       "normalized": false,
@@ -488,7 +488,7 @@
       "single_word": false,
       "special": true
     },
-    "128061": {
+    "61": {
       "content": "<|reserved_special_token_53|>",
       "lstrip": false,
       "normalized": false,
@@ -496,7 +496,7 @@
       "single_word": false,
       "special": true
     },
-    "128062": {
+    "62": {
       "content": "<|reserved_special_token_54|>",
       "lstrip": false,
       "normalized": false,
@@ -504,7 +504,7 @@
       "single_word": false,
       "special": true
     },
-    "128063": {
+    "63": {
       "content": "<|reserved_special_token_55|>",
       "lstrip": false,
       "normalized": false,
@@ -512,7 +512,7 @@
       "single_word": false,
       "special": true
     },
-    "128064": {
+    "64": {
       "content": "<|reserved_special_token_56|>",
       "lstrip": false,
       "normalized": false,
@@ -520,7 +520,7 @@
       "single_word": false,
       "special": true
     },
-    "128065": {
+    "65": {
       "content": "<|reserved_special_token_57|>",
       "lstrip": false,
       "normalized": false,
@@ -528,7 +528,7 @@
       "single_word": false,
       "special": true
     },
-    "128066": {
+    "66": {
       "content": "<|reserved_special_token_58|>",
       "lstrip": false,
       "normalized": false,
@@ -536,7 +536,7 @@
       "single_word": false,
       "special": true
     },
-    "128067": {
+    "67": {
       "content": "<|reserved_special_token_59|>",
       "lstrip": false,
       "normalized": false,
@@ -544,7 +544,7 @@
       "single_word": false,
       "special": true
     },
-    "128068": {
+    "68": {
       "content": "<|reserved_special_token_60|>",
       "lstrip": false,
       "normalized": false,
@@ -552,7 +552,7 @@
       "single_word": false,
       "special": true
     },
-    "128069": {
+    "69": {
       "content": "<|reserved_special_token_61|>",
       "lstrip": false,
       "normalized": false,
@@ -560,7 +560,7 @@
       "single_word": false,
       "special": true
     },
-    "128070": {
+    "70": {
       "content": "<|reserved_special_token_62|>",
       "lstrip": false,
       "normalized": false,
@@ -568,7 +568,7 @@
       "single_word": false,
       "special": true
     },
-    "128071": {
+    "71": {
       "content": "<|reserved_special_token_63|>",
       "lstrip": false,
       "normalized": false,
@@ -576,7 +576,7 @@
       "single_word": false,
       "special": true
     },
-    "128072": {
+    "72": {
       "content": "<|reserved_special_token_64|>",
       "lstrip": false,
       "normalized": false,
@@ -584,7 +584,7 @@
       "single_word": false,
       "special": true
     },
-    "128073": {
+    "73": {
       "content": "<|reserved_special_token_65|>",
       "lstrip": false,
       "normalized": false,
@@ -592,7 +592,7 @@
       "single_word": false,
       "special": true
     },
-    "128074": {
+    "74": {
       "content": "<|reserved_special_token_66|>",
       "lstrip": false,
       "normalized": false,
@@ -600,7 +600,7 @@
       "single_word": false,
       "special": true
     },
-    "128075": {
+    "75": {
       "content": "<|reserved_special_token_67|>",
       "lstrip": false,
       "normalized": false,
@@ -608,7 +608,7 @@
       "single_word": false,
       "special": true
     },
-    "128076": {
+    "76": {
       "content": "<|reserved_special_token_68|>",
       "lstrip": false,
       "normalized": false,
@@ -616,7 +616,7 @@
       "single_word": false,
       "special": true
     },
-    "128077": {
+    "77": {
       "content": "<|reserved_special_token_69|>",
       "lstrip": false,
       "normalized": false,
@@ -624,7 +624,7 @@
       "single_word": false,
       "special": true
     },
-    "128078": {
+    "78": {
       "content": "<|reserved_special_token_70|>",
       "lstrip": false,
       "normalized": false,
@@ -632,7 +632,7 @@
       "single_word": false,
       "special": true
     },
-    "128079": {
+    "79": {
       "content": "<|reserved_special_token_71|>",
       "lstrip": false,
       "normalized": false,
@@ -640,7 +640,7 @@
       "single_word": false,
       "special": true
     },
-    "128080": {
+    "80": {
       "content": "<|reserved_special_token_72|>",
       "lstrip": false,
       "normalized": false,
@@ -648,7 +648,7 @@
       "single_word": false,
       "special": true
     },
-    "128081": {
+    "81": {
       "content": "<|reserved_special_token_73|>",
       "lstrip": false,
       "normalized": false,
@@ -656,7 +656,7 @@
       "single_word": false,
       "special": true
     },
-    "128082": {
+    "82": {
       "content": "<|reserved_special_token_74|>",
       "lstrip": false,
       "normalized": false,
@@ -664,7 +664,7 @@
       "single_word": false,
       "special": true
     },
-    "128083": {
+    "83": {
       "content": "<|reserved_special_token_75|>",
       "lstrip": false,
       "normalized": false,
@@ -672,7 +672,7 @@
       "single_word": false,
       "special": true
     },
-    "128084": {
+    "84": {
       "content": "<|reserved_special_token_76|>",
       "lstrip": false,
       "normalized": false,
@@ -680,7 +680,7 @@
       "single_word": false,
       "special": true
     },
-    "128085": {
+    "85": {
       "content": "<|reserved_special_token_77|>",
       "lstrip": false,
       "normalized": false,
@@ -688,7 +688,7 @@
       "single_word": false,
       "special": true
     },
-    "128086": {
+    "86": {
       "content": "<|reserved_special_token_78|>",
       "lstrip": false,
       "normalized": false,
@@ -696,7 +696,7 @@
       "single_word": false,
       "special": true
     },
-    "128087": {
+    "87": {
       "content": "<|reserved_special_token_79|>",
       "lstrip": false,
       "normalized": false,
@@ -704,7 +704,7 @@
       "single_word": false,
       "special": true
     },
-    "128088": {
+    "88": {
       "content": "<|reserved_special_token_80|>",
       "lstrip": false,
       "normalized": false,
@@ -712,7 +712,7 @@
       "single_word": false,
       "special": true
     },
-    "128089": {
+    "89": {
       "content": "<|reserved_special_token_81|>",
       "lstrip": false,
       "normalized": false,
@@ -720,7 +720,7 @@
       "single_word": false,
       "special": true
     },
-    "128090": {
+    "90": {
       "content": "<|reserved_special_token_82|>",
       "lstrip": false,
       "normalized": false,
@@ -728,7 +728,7 @@
       "single_word": false,
       "special": true
     },
-    "128091": {
+    "91": {
       "content": "<|reserved_special_token_83|>",
       "lstrip": false,
       "normalized": false,
@@ -736,7 +736,7 @@
       "single_word": false,
       "special": true
     },
-    "128092": {
+    "92": {
       "content": "<|reserved_special_token_84|>",
       "lstrip": false,
       "normalized": false,
@@ -744,7 +744,7 @@
       "single_word": false,
       "special": true
     },
-    "128093": {
+    "93": {
       "content": "<|reserved_special_token_85|>",
       "lstrip": false,
       "normalized": false,
@@ -752,7 +752,7 @@
       "single_word": false,
       "special": true
     },
-    "128094": {
+    "94": {
       "content": "<|reserved_special_token_86|>",
       "lstrip": false,
       "normalized": false,
@@ -760,7 +760,7 @@
       "single_word": false,
       "special": true
     },
-    "128095": {
+    "95": {
       "content": "<|reserved_special_token_87|>",
       "lstrip": false,
       "normalized": false,
@@ -768,7 +768,7 @@
       "single_word": false,
       "special": true
     },
-    "128096": {
+    "96": {
       "content": "<|reserved_special_token_88|>",
       "lstrip": false,
       "normalized": false,
@@ -776,7 +776,7 @@
       "single_word": false,
       "special": true
     },
-    "128097": {
+    "97": {
       "content": "<|reserved_special_token_89|>",
       "lstrip": false,
       "normalized": false,
@@ -784,7 +784,7 @@
       "single_word": false,
       "special": true
     },
-    "128098": {
+    "98": {
       "content": "<|reserved_special_token_90|>",
       "lstrip": false,
       "normalized": false,
@@ -792,7 +792,7 @@
       "single_word": false,
       "special": true
     },
-    "128099": {
+    "99": {
       "content": "<|reserved_special_token_91|>",
       "lstrip": false,
       "normalized": false,
@@ -800,7 +800,7 @@
       "single_word": false,
       "special": true
     },
-    "128100": {
+    "100": {
       "content": "<|reserved_special_token_92|>",
       "lstrip": false,
       "normalized": false,
@@ -808,7 +808,7 @@
       "single_word": false,
       "special": true
     },
-    "128101": {
+    "101": {
       "content": "<|reserved_special_token_93|>",
       "lstrip": false,
       "normalized": false,
@@ -816,7 +816,7 @@
       "single_word": false,
       "special": true
     },
-    "128102": {
+    "102": {
       "content": "<|reserved_special_token_94|>",
       "lstrip": false,
       "normalized": false,
@@ -824,7 +824,7 @@
       "single_word": false,
       "special": true
     },
-    "128103": {
+    "103": {
       "content": "<|reserved_special_token_95|>",
       "lstrip": false,
       "normalized": false,
@@ -832,7 +832,7 @@
       "single_word": false,
       "special": true
     },
-    "128104": {
+    "104": {
       "content": "<|reserved_special_token_96|>",
       "lstrip": false,
       "normalized": false,
@@ -840,7 +840,7 @@
       "single_word": false,
       "special": true
     },
-    "128105": {
+    "105": {
       "content": "<|reserved_special_token_97|>",
       "lstrip": false,
       "normalized": false,
@@ -848,7 +848,7 @@
       "single_word": false,
       "special": true
     },
-    "128106": {
+    "106": {
       "content": "<|reserved_special_token_98|>",
       "lstrip": false,
       "normalized": false,
@@ -856,7 +856,7 @@
       "single_word": false,
       "special": true
     },
-    "128107": {
+    "107": {
       "content": "<|reserved_special_token_99|>",
       "lstrip": false,
       "normalized": false,
@@ -864,7 +864,7 @@
       "single_word": false,
       "special": true
     },
-    "128108": {
+    "108": {
       "content": "<|reserved_special_token_100|>",
       "lstrip": false,
       "normalized": false,
@@ -872,7 +872,7 @@
       "single_word": false,
       "special": true
     },
-    "128109": {
+    "109": {
       "content": "<|reserved_special_token_101|>",
       "lstrip": false,
       "normalized": false,
@@ -880,7 +880,7 @@
       "single_word": false,
       "special": true
     },
-    "128110": {
+    "110": {
       "content": "<|reserved_special_token_102|>",
       "lstrip": false,
       "normalized": false,
@@ -888,7 +888,7 @@
       "single_word": false,
       "special": true
     },
-    "128111": {
+    "111": {
       "content": "<|reserved_special_token_103|>",
       "lstrip": false,
       "normalized": false,
@@ -896,7 +896,7 @@
       "single_word": false,
       "special": true
     },
-    "128112": {
+    "112": {
       "content": "<|reserved_special_token_104|>",
       "lstrip": false,
       "normalized": false,
@@ -904,7 +904,7 @@
       "single_word": false,
       "special": true
     },
-    "128113": {
+    "113": {
       "content": "<|reserved_special_token_105|>",
       "lstrip": false,
       "normalized": false,
@@ -912,7 +912,7 @@
       "single_word": false,
       "special": true
     },
-    "128114": {
+    "114": {
       "content": "<|reserved_special_token_106|>",
       "lstrip": false,
       "normalized": false,
@@ -920,7 +920,7 @@
       "single_word": false,
       "special": true
     },
-    "128115": {
+    "115": {
       "content": "<|reserved_special_token_107|>",
       "lstrip": false,
       "normalized": false,
@@ -928,7 +928,7 @@
       "single_word": false,
       "special": true
     },
-    "128116": {
+    "116": {
       "content": "<|reserved_special_token_108|>",
       "lstrip": false,
       "normalized": false,
@@ -936,7 +936,7 @@
       "single_word": false,
       "special": true
     },
-    "128117": {
+    "117": {
       "content": "<|reserved_special_token_109|>",
       "lstrip": false,
       "normalized": false,
@@ -944,7 +944,7 @@
       "single_word": false,
       "special": true
     },
-    "128118": {
+    "118": {
       "content": "<|reserved_special_token_110|>",
       "lstrip": false,
       "normalized": false,
@@ -952,7 +952,7 @@
       "single_word": false,
       "special": true
     },
-    "128119": {
+    "119": {
       "content": "<|reserved_special_token_111|>",
       "lstrip": false,
       "normalized": false,
@@ -960,7 +960,7 @@
       "single_word": false,
       "special": true
     },
-    "128120": {
+    "120": {
       "content": "<|reserved_special_token_112|>",
       "lstrip": false,
       "normalized": false,
@@ -968,7 +968,7 @@
       "single_word": false,
       "special": true
     },
-    "128121": {
+    "121": {
       "content": "<|reserved_special_token_113|>",
       "lstrip": false,
       "normalized": false,
@@ -976,7 +976,7 @@
       "single_word": false,
       "special": true
     },
-    "128122": {
+    "122": {
       "content": "<|reserved_special_token_114|>",
       "lstrip": false,
       "normalized": false,
@@ -984,7 +984,7 @@
       "single_word": false,
       "special": true
     },
-    "128123": {
+    "123": {
       "content": "<|reserved_special_token_115|>",
       "lstrip": false,
       "normalized": false,
@@ -992,7 +992,7 @@
       "single_word": false,
       "special": true
     },
-    "128124": {
+    "124": {
       "content": "<|reserved_special_token_116|>",
       "lstrip": false,
       "normalized": false,
@@ -1000,7 +1000,7 @@
       "single_word": false,
       "special": true
     },
-    "128125": {
+    "125": {
       "content": "<|reserved_special_token_117|>",
       "lstrip": false,
       "normalized": false,
@@ -1008,7 +1008,7 @@
       "single_word": false,
       "special": true
     },
-    "128126": {
+    "126": {
       "content": "<|reserved_special_token_118|>",
       "lstrip": false,
       "normalized": false,
@@ -1016,7 +1016,7 @@
       "single_word": false,
       "special": true
     },
-    "128127": {
+    "127": {
       "content": "<|reserved_special_token_119|>",
       "lstrip": false,
       "normalized": false,
@@ -1024,7 +1024,7 @@
       "single_word": false,
       "special": true
     },
-    "128128": {
+    "128": {
       "content": "<|reserved_special_token_120|>",
       "lstrip": false,
       "normalized": false,
@@ -1032,7 +1032,7 @@
       "single_word": false,
       "special": true
     },
-    "128129": {
+    "129": {
       "content": "<|reserved_special_token_121|>",
       "lstrip": false,
       "normalized": false,
@@ -1040,7 +1040,7 @@
       "single_word": false,
       "special": true
     },
-    "128130": {
+    "130": {
       "content": "<|reserved_special_token_122|>",
       "lstrip": false,
       "normalized": false,
@@ -1048,7 +1048,7 @@
       "single_word": false,
       "special": true
     },
-    "128131": {
+    "131": {
       "content": "<|reserved_special_token_123|>",
       "lstrip": false,
       "normalized": false,
@@ -1056,7 +1056,7 @@
       "single_word": false,
       "special": true
     },
-    "128132": {
+    "132": {
       "content": "<|reserved_special_token_124|>",
       "lstrip": false,
       "normalized": false,
@@ -1064,7 +1064,7 @@
       "single_word": false,
       "special": true
     },
-    "128133": {
+    "133": {
       "content": "<|reserved_special_token_125|>",
       "lstrip": false,
       "normalized": false,
@@ -1072,7 +1072,7 @@
       "single_word": false,
       "special": true
     },
-    "128134": {
+    "134": {
       "content": "<|reserved_special_token_126|>",
       "lstrip": false,
       "normalized": false,
@@ -1080,7 +1080,7 @@
       "single_word": false,
       "special": true
     },
-    "128135": {
+    "135": {
       "content": "<|reserved_special_token_127|>",
       "lstrip": false,
       "normalized": false,
@@ -1088,7 +1088,7 @@
       "single_word": false,
       "special": true
     },
-    "128136": {
+    "136": {
       "content": "<|reserved_special_token_128|>",
       "lstrip": false,
       "normalized": false,
@@ -1096,7 +1096,7 @@
       "single_word": false,
       "special": true
     },
-    "128137": {
+    "137": {
       "content": "<|reserved_special_token_129|>",
       "lstrip": false,
       "normalized": false,
@@ -1104,7 +1104,7 @@
       "single_word": false,
       "special": true
     },
-    "128138": {
+    "138": {
       "content": "<|reserved_special_token_130|>",
       "lstrip": false,
       "normalized": false,
@@ -1112,7 +1112,7 @@
       "single_word": false,
       "special": true
     },
-    "128139": {
+    "139": {
       "content": "<|reserved_special_token_131|>",
       "lstrip": false,
       "normalized": false,
@@ -1120,7 +1120,7 @@
       "single_word": false,
       "special": true
     },
-    "128140": {
+    "140": {
       "content": "<|reserved_special_token_132|>",
       "lstrip": false,
       "normalized": false,
@@ -1128,7 +1128,7 @@
       "single_word": false,
       "special": true
     },
-    "128141": {
+    "141": {
       "content": "<|reserved_special_token_133|>",
       "lstrip": false,
       "normalized": false,
@@ -1136,7 +1136,7 @@
       "single_word": false,
       "special": true
     },
-    "128142": {
+    "142": {
       "content": "<|reserved_special_token_134|>",
       "lstrip": false,
       "normalized": false,
@@ -1144,7 +1144,7 @@
       "single_word": false,
       "special": true
     },
-    "128143": {
+    "143": {
       "content": "<|reserved_special_token_135|>",
       "lstrip": false,
       "normalized": false,
@@ -1152,7 +1152,7 @@
       "single_word": false,
       "special": true
     },
-    "128144": {
+    "144": {
       "content": "<|reserved_special_token_136|>",
       "lstrip": false,
       "normalized": false,
@@ -1160,7 +1160,7 @@
       "single_word": false,
       "special": true
     },
-    "128145": {
+    "145": {
       "content": "<|reserved_special_token_137|>",
       "lstrip": false,
       "normalized": false,
@@ -1168,7 +1168,7 @@
       "single_word": false,
       "special": true
     },
-    "128146": {
+    "146": {
       "content": "<|reserved_special_token_138|>",
       "lstrip": false,
       "normalized": false,
@@ -1176,7 +1176,7 @@
       "single_word": false,
       "special": true
     },
-    "128147": {
+    "147": {
       "content": "<|reserved_special_token_139|>",
       "lstrip": false,
       "normalized": false,
@@ -1184,7 +1184,7 @@
       "single_word": false,
       "special": true
     },
-    "128148": {
+    "148": {
       "content": "<|reserved_special_token_140|>",
       "lstrip": false,
       "normalized": false,
@@ -1192,7 +1192,7 @@
       "single_word": false,
       "special": true
     },
-    "128149": {
+    "149": {
       "content": "<|reserved_special_token_141|>",
       "lstrip": false,
       "normalized": false,
@@ -1200,7 +1200,7 @@
       "single_word": false,
       "special": true
     },
-    "128150": {
+    "150": {
       "content": "<|reserved_special_token_142|>",
       "lstrip": false,
       "normalized": false,
@@ -1208,7 +1208,7 @@
       "single_word": false,
       "special": true
     },
-    "128151": {
+    "151": {
       "content": "<|reserved_special_token_143|>",
       "lstrip": false,
       "normalized": false,
@@ -1216,7 +1216,7 @@
       "single_word": false,
       "special": true
     },
-    "128152": {
+    "152": {
       "content": "<|reserved_special_token_144|>",
       "lstrip": false,
       "normalized": false,
@@ -1224,7 +1224,7 @@
       "single_word": false,
       "special": true
     },
-    "128153": {
+    "153": {
       "content": "<|reserved_special_token_145|>",
       "lstrip": false,
       "normalized": false,
@@ -1232,7 +1232,7 @@
       "single_word": false,
       "special": true
     },
-    "128154": {
+    "154": {
       "content": "<|reserved_special_token_146|>",
       "lstrip": false,
       "normalized": false,
@@ -1240,7 +1240,7 @@
       "single_word": false,
       "special": true
     },
-    "128155": {
+    "155": {
       "content": "<|reserved_special_token_147|>",
       "lstrip": false,
       "normalized": false,
@@ -1248,7 +1248,7 @@
       "single_word": false,
       "special": true
     },
-    "128156": {
+    "156": {
       "content": "<|reserved_special_token_148|>",
       "lstrip": false,
       "normalized": false,
@@ -1256,7 +1256,7 @@
       "single_word": false,
       "special": true
     },
-    "128157": {
+    "157": {
       "content": "<|reserved_special_token_149|>",
       "lstrip": false,
       "normalized": false,
@@ -1264,7 +1264,7 @@
       "single_word": false,
       "special": true
     },
-    "128158": {
+    "158": {
       "content": "<|reserved_special_token_150|>",
       "lstrip": false,
       "normalized": false,
@@ -1272,7 +1272,7 @@
       "single_word": false,
       "special": true
     },
-    "128159": {
+    "159": {
       "content": "<|reserved_special_token_151|>",
       "lstrip": false,
       "normalized": false,
@@ -1280,7 +1280,7 @@
       "single_word": false,
       "special": true
     },
-    "128160": {
+    "160": {
       "content": "<|reserved_special_token_152|>",
       "lstrip": false,
       "normalized": false,
@@ -1288,7 +1288,7 @@
       "single_word": false,
       "special": true
     },
-    "128161": {
+    "161": {
       "content": "<|reserved_special_token_153|>",
       "lstrip": false,
       "normalized": false,
@@ -1296,7 +1296,7 @@
       "single_word": false,
       "special": true
     },
-    "128162": {
+    "162": {
       "content": "<|reserved_special_token_154|>",
       "lstrip": false,
       "normalized": false,
@@ -1304,7 +1304,7 @@
       "single_word": false,
       "special": true
     },
-    "128163": {
+    "163": {
       "content": "<|reserved_special_token_155|>",
       "lstrip": false,
       "normalized": false,
@@ -1312,7 +1312,7 @@
       "single_word": false,
       "special": true
     },
-    "128164": {
+    "164": {
       "content": "<|reserved_special_token_156|>",
       "lstrip": false,
       "normalized": false,
@@ -1320,7 +1320,7 @@
       "single_word": false,
       "special": true
     },
-    "128165": {
+    "165": {
       "content": "<|reserved_special_token_157|>",
       "lstrip": false,
       "normalized": false,
@@ -1328,7 +1328,7 @@
       "single_word": false,
       "special": true
     },
-    "128166": {
+    "166": {
       "content": "<|reserved_special_token_158|>",
       "lstrip": false,
       "normalized": false,
@@ -1336,7 +1336,7 @@
       "single_word": false,
       "special": true
     },
-    "128167": {
+    "167": {
       "content": "<|reserved_special_token_159|>",
       "lstrip": false,
       "normalized": false,
@@ -1344,7 +1344,7 @@
       "single_word": false,
       "special": true
     },
-    "128168": {
+    "168": {
       "content": "<|reserved_special_token_160|>",
       "lstrip": false,
       "normalized": false,
@@ -1352,7 +1352,7 @@
       "single_word": false,
       "special": true
     },
-    "128169": {
+    "169": {
       "content": "<|reserved_special_token_161|>",
       "lstrip": false,
       "normalized": false,
@@ -1360,7 +1360,7 @@
       "single_word": false,
       "special": true
     },
-    "128170": {
+    "170": {
       "content": "<|reserved_special_token_162|>",
       "lstrip": false,
       "normalized": false,
@@ -1368,7 +1368,7 @@
       "single_word": false,
       "special": true
     },
-    "128171": {
+    "171": {
       "content": "<|reserved_special_token_163|>",
       "lstrip": false,
       "normalized": false,
@@ -1376,7 +1376,7 @@
       "single_word": false,
       "special": true
     },
-    "128172": {
+    "172": {
       "content": "<|reserved_special_token_164|>",
       "lstrip": false,
       "normalized": false,
@@ -1384,7 +1384,7 @@
       "single_word": false,
       "special": true
     },
-    "128173": {
+    "173": {
       "content": "<|reserved_special_token_165|>",
       "lstrip": false,
       "normalized": false,
@@ -1392,7 +1392,7 @@
       "single_word": false,
       "special": true
     },
-    "128174": {
+    "174": {
       "content": "<|reserved_special_token_166|>",
       "lstrip": false,
       "normalized": false,
@@ -1400,7 +1400,7 @@
       "single_word": false,
       "special": true
     },
-    "128175": {
+    "175": {
       "content": "<|reserved_special_token_167|>",
       "lstrip": false,
       "normalized": false,
@@ -1408,7 +1408,7 @@
       "single_word": false,
       "special": true
     },
-    "128176": {
+    "176": {
       "content": "<|reserved_special_token_168|>",
       "lstrip": false,
       "normalized": false,
@@ -1416,7 +1416,7 @@
       "single_word": false,
       "special": true
     },
-    "128177": {
+    "177": {
       "content": "<|reserved_special_token_169|>",
       "lstrip": false,
       "normalized": false,
@@ -1424,7 +1424,7 @@
       "single_word": false,
       "special": true
     },
-    "128178": {
+    "178": {
       "content": "<|reserved_special_token_170|>",
       "lstrip": false,
       "normalized": false,
@@ -1432,7 +1432,7 @@
       "single_word": false,
       "special": true
     },
-    "128179": {
+    "179": {
       "content": "<|reserved_special_token_171|>",
       "lstrip": false,
       "normalized": false,
@@ -1440,7 +1440,7 @@
       "single_word": false,
       "special": true
     },
-    "128180": {
+    "180": {
       "content": "<|reserved_special_token_172|>",
       "lstrip": false,
       "normalized": false,
@@ -1448,7 +1448,7 @@
       "single_word": false,
       "special": true
     },
-    "128181": {
+    "181": {
       "content": "<|reserved_special_token_173|>",
       "lstrip": false,
       "normalized": false,
@@ -1456,7 +1456,7 @@
       "single_word": false,
       "special": true
     },
-    "128182": {
+    "182": {
       "content": "<|reserved_special_token_174|>",
       "lstrip": false,
       "normalized": false,
@@ -1464,7 +1464,7 @@
       "single_word": false,
       "special": true
     },
-    "128183": {
+    "183": {
       "content": "<|reserved_special_token_175|>",
       "lstrip": false,
       "normalized": false,
@@ -1472,7 +1472,7 @@
       "single_word": false,
       "special": true
     },
-    "128184": {
+    "184": {
       "content": "<|reserved_special_token_176|>",
       "lstrip": false,
       "normalized": false,
@@ -1480,7 +1480,7 @@
       "single_word": false,
       "special": true
     },
-    "128185": {
+    "185": {
       "content": "<|reserved_special_token_177|>",
       "lstrip": false,
       "normalized": false,
@@ -1488,7 +1488,7 @@
       "single_word": false,
       "special": true
     },
-    "128186": {
+    "186": {
       "content": "<|reserved_special_token_178|>",
       "lstrip": false,
       "normalized": false,
@@ -1496,7 +1496,7 @@
       "single_word": false,
       "special": true
     },
-    "128187": {
+    "187": {
       "content": "<|reserved_special_token_179|>",
       "lstrip": false,
       "normalized": false,
@@ -1504,7 +1504,7 @@
       "single_word": false,
       "special": true
     },
-    "128188": {
+    "188": {
       "content": "<|reserved_special_token_180|>",
       "lstrip": false,
       "normalized": false,
@@ -1512,7 +1512,7 @@
       "single_word": false,
       "special": true
     },
-    "128189": {
+    "189": {
       "content": "<|reserved_special_token_181|>",
       "lstrip": false,
       "normalized": false,
@@ -1520,7 +1520,7 @@
       "single_word": false,
       "special": true
     },
-    "128190": {
+    "190": {
       "content": "<|reserved_special_token_182|>",
       "lstrip": false,
       "normalized": false,
@@ -1528,7 +1528,7 @@
       "single_word": false,
       "special": true
     },
-    "128191": {
+    "191": {
       "content": "<|reserved_special_token_183|>",
       "lstrip": false,
       "normalized": false,
@@ -1536,7 +1536,7 @@
       "single_word": false,
       "special": true
     },
-    "128192": {
+    "192": {
       "content": "<|reserved_special_token_184|>",
       "lstrip": false,
       "normalized": false,
@@ -1544,7 +1544,7 @@
       "single_word": false,
       "special": true
     },
-    "128193": {
+    "193": {
       "content": "<|reserved_special_token_185|>",
       "lstrip": false,
       "normalized": false,
@@ -1552,7 +1552,7 @@
       "single_word": false,
       "special": true
     },
-    "128194": {
+    "194": {
       "content": "<|reserved_special_token_186|>",
       "lstrip": false,
       "normalized": false,
@@ -1560,7 +1560,7 @@
       "single_word": false,
       "special": true
     },
-    "128195": {
+    "195": {
       "content": "<|reserved_special_token_187|>",
       "lstrip": false,
       "normalized": false,
@@ -1568,7 +1568,7 @@
       "single_word": false,
       "special": true
     },
-    "128196": {
+    "196": {
       "content": "<|reserved_special_token_188|>",
       "lstrip": false,
       "normalized": false,
@@ -1576,7 +1576,7 @@
       "single_word": false,
       "special": true
     },
-    "128197": {
+    "197": {
       "content": "<|reserved_special_token_189|>",
       "lstrip": false,
       "normalized": false,
@@ -1584,7 +1584,7 @@
       "single_word": false,
       "special": true
     },
-    "128198": {
+    "198": {
       "content": "<|reserved_special_token_190|>",
       "lstrip": false,
       "normalized": false,
@@ -1592,7 +1592,7 @@
       "single_word": false,
       "special": true
     },
-    "128199": {
+    "199": {
       "content": "<|reserved_special_token_191|>",
       "lstrip": false,
       "normalized": false,
@@ -1600,7 +1600,7 @@
       "single_word": false,
       "special": true
     },
-    "128200": {
+    "200": {
       "content": "<|reserved_special_token_192|>",
       "lstrip": false,
       "normalized": false,
@@ -1608,7 +1608,7 @@
       "single_word": false,
       "special": true
     },
-    "128201": {
+    "201": {
       "content": "<|reserved_special_token_193|>",
       "lstrip": false,
       "normalized": false,
@@ -1616,7 +1616,7 @@
       "single_word": false,
       "special": true
     },
-    "128202": {
+    "202": {
       "content": "<|reserved_special_token_194|>",
       "lstrip": false,
       "normalized": false,
@@ -1624,7 +1624,7 @@
       "single_word": false,
       "special": true
     },
-    "128203": {
+    "203": {
       "content": "<|reserved_special_token_195|>",
       "lstrip": false,
       "normalized": false,
@@ -1632,7 +1632,7 @@
       "single_word": false,
       "special": true
     },
-    "128204": {
+    "204": {
       "content": "<|reserved_special_token_196|>",
       "lstrip": false,
       "normalized": false,
@@ -1640,7 +1640,7 @@
       "single_word": false,
       "special": true
     },
-    "128205": {
+    "205": {
       "content": "<|reserved_special_token_197|>",
       "lstrip": false,
       "normalized": false,
@@ -1648,7 +1648,7 @@
       "single_word": false,
       "special": true
     },
-    "128206": {
+    "206": {
       "content": "<|reserved_special_token_198|>",
       "lstrip": false,
       "normalized": false,
@@ -1656,7 +1656,7 @@
       "single_word": false,
       "special": true
     },
-    "128207": {
+    "207": {
       "content": "<|reserved_special_token_199|>",
       "lstrip": false,
       "normalized": false,
@@ -1664,7 +1664,7 @@
       "single_word": false,
       "special": true
     },
-    "128208": {
+    "208": {
       "content": "<|reserved_special_token_200|>",
       "lstrip": false,
       "normalized": false,
@@ -1672,7 +1672,7 @@
       "single_word": false,
       "special": true
     },
-    "128209": {
+    "209": {
       "content": "<|reserved_special_token_201|>",
       "lstrip": false,
       "normalized": false,
@@ -1680,7 +1680,7 @@
       "single_word": false,
       "special": true
     },
-    "128210": {
+    "210": {
       "content": "<|reserved_special_token_202|>",
       "lstrip": false,
       "normalized": false,
@@ -1688,7 +1688,7 @@
       "single_word": false,
       "special": true
     },
-    "128211": {
+    "211": {
       "content": "<|reserved_special_token_203|>",
       "lstrip": false,
       "normalized": false,
@@ -1696,7 +1696,7 @@
       "single_word": false,
       "special": true
     },
-    "128212": {
+    "212": {
       "content": "<|reserved_special_token_204|>",
       "lstrip": false,
       "normalized": false,
@@ -1704,7 +1704,7 @@
       "single_word": false,
       "special": true
     },
-    "128213": {
+    "213": {
       "content": "<|reserved_special_token_205|>",
       "lstrip": false,
       "normalized": false,
@@ -1712,7 +1712,7 @@
       "single_word": false,
       "special": true
     },
-    "128214": {
+    "214": {
       "content": "<|reserved_special_token_206|>",
       "lstrip": false,
       "normalized": false,
@@ -1720,7 +1720,7 @@
       "single_word": false,
       "special": true
     },
-    "128215": {
+    "215": {
       "content": "<|reserved_special_token_207|>",
       "lstrip": false,
       "normalized": false,
@@ -1728,7 +1728,7 @@
       "single_word": false,
       "special": true
     },
-    "128216": {
+    "216": {
       "content": "<|reserved_special_token_208|>",
       "lstrip": false,
       "normalized": false,
@@ -1736,7 +1736,7 @@
       "single_word": false,
       "special": true
     },
-    "128217": {
+    "217": {
       "content": "<|reserved_special_token_209|>",
       "lstrip": false,
       "normalized": false,
@@ -1744,7 +1744,7 @@
       "single_word": false,
       "special": true
     },
-    "128218": {
+    "218": {
       "content": "<|reserved_special_token_210|>",
       "lstrip": false,
       "normalized": false,
@@ -1752,7 +1752,7 @@
       "single_word": false,
       "special": true
     },
-    "128219": {
+    "219": {
       "content": "<|reserved_special_token_211|>",
       "lstrip": false,
       "normalized": false,
@@ -1760,7 +1760,7 @@
       "single_word": false,
       "special": true
     },
-    "128220": {
+    "220": {
       "content": "<|reserved_special_token_212|>",
       "lstrip": false,
       "normalized": false,
@@ -1768,7 +1768,7 @@
       "single_word": false,
       "special": true
     },
-    "128221": {
+    "221": {
       "content": "<|reserved_special_token_213|>",
       "lstrip": false,
       "normalized": false,
@@ -1776,7 +1776,7 @@
       "single_word": false,
       "special": true
     },
-    "128222": {
+    "222": {
       "content": "<|reserved_special_token_214|>",
       "lstrip": false,
       "normalized": false,
@@ -1784,7 +1784,7 @@
       "single_word": false,
       "special": true
     },
-    "128223": {
+    "223": {
       "content": "<|reserved_special_token_215|>",
       "lstrip": false,
       "normalized": false,
@@ -1792,7 +1792,7 @@
       "single_word": false,
       "special": true
     },
-    "128224": {
+    "224": {
       "content": "<|reserved_special_token_216|>",
       "lstrip": false,
       "normalized": false,
@@ -1800,7 +1800,7 @@
       "single_word": false,
       "special": true
     },
-    "128225": {
+    "225": {
       "content": "<|reserved_special_token_217|>",
       "lstrip": false,
       "normalized": false,
@@ -1808,7 +1808,7 @@
       "single_word": false,
       "special": true
     },
-    "128226": {
+    "226": {
       "content": "<|reserved_special_token_218|>",
       "lstrip": false,
       "normalized": false,
@@ -1816,7 +1816,7 @@
       "single_word": false,
       "special": true
     },
-    "128227": {
+    "227": {
       "content": "<|reserved_special_token_219|>",
       "lstrip": false,
       "normalized": false,
@@ -1824,7 +1824,7 @@
       "single_word": false,
       "special": true
     },
-    "128228": {
+    "228": {
       "content": "<|reserved_special_token_220|>",
       "lstrip": false,
       "normalized": false,
@@ -1832,7 +1832,7 @@
       "single_word": false,
       "special": true
     },
-    "128229": {
+    "229": {
       "content": "<|reserved_special_token_221|>",
       "lstrip": false,
       "normalized": false,
@@ -1840,7 +1840,7 @@
       "single_word": false,
       "special": true
     },
-    "128230": {
+    "230": {
       "content": "<|reserved_special_token_222|>",
       "lstrip": false,
       "normalized": false,
@@ -1848,7 +1848,7 @@
       "single_word": false,
       "special": true
     },
-    "128231": {
+    "231": {
       "content": "<|reserved_special_token_223|>",
       "lstrip": false,
       "normalized": false,
@@ -1856,7 +1856,7 @@
       "single_word": false,
       "special": true
     },
-    "128232": {
+    "232": {
       "content": "<|reserved_special_token_224|>",
       "lstrip": false,
       "normalized": false,
@@ -1864,7 +1864,7 @@
       "single_word": false,
       "special": true
     },
-    "128233": {
+    "233": {
       "content": "<|reserved_special_token_225|>",
       "lstrip": false,
       "normalized": false,
@@ -1872,7 +1872,7 @@
       "single_word": false,
       "special": true
     },
-    "128234": {
+    "234": {
       "content": "<|reserved_special_token_226|>",
       "lstrip": false,
       "normalized": false,
@@ -1880,7 +1880,7 @@
       "single_word": false,
       "special": true
     },
-    "128235": {
+    "235": {
       "content": "<|reserved_special_token_227|>",
       "lstrip": false,
       "normalized": false,
@@ -1888,7 +1888,7 @@
       "single_word": false,
       "special": true
     },
-    "128236": {
+    "236": {
       "content": "<|reserved_special_token_228|>",
       "lstrip": false,
       "normalized": false,
@@ -1896,7 +1896,7 @@
       "single_word": false,
       "special": true
     },
-    "128237": {
+    "237": {
       "content": "<|reserved_special_token_229|>",
       "lstrip": false,
       "normalized": false,
@@ -1904,7 +1904,7 @@
       "single_word": false,
       "special": true
     },
-    "128238": {
+    "238": {
       "content": "<|reserved_special_token_230|>",
       "lstrip": false,
       "normalized": false,
@@ -1912,7 +1912,7 @@
       "single_word": false,
       "special": true
     },
-    "128239": {
+    "239": {
       "content": "<|reserved_special_token_231|>",
       "lstrip": false,
       "normalized": false,
@@ -1920,7 +1920,7 @@
       "single_word": false,
       "special": true
     },
-    "128240": {
+    "240": {
       "content": "<|reserved_special_token_232|>",
       "lstrip": false,
       "normalized": false,
@@ -1928,7 +1928,7 @@
       "single_word": false,
       "special": true
     },
-    "128241": {
+    "241": {
       "content": "<|reserved_special_token_233|>",
       "lstrip": false,
       "normalized": false,
@@ -1936,7 +1936,7 @@
       "single_word": false,
       "special": true
     },
-    "128242": {
+    "242": {
       "content": "<|reserved_special_token_234|>",
       "lstrip": false,
       "normalized": false,
@@ -1944,7 +1944,7 @@
       "single_word": false,
       "special": true
     },
-    "128243": {
+    "243": {
       "content": "<|reserved_special_token_235|>",
       "lstrip": false,
       "normalized": false,
@@ -1952,7 +1952,7 @@
       "single_word": false,
       "special": true
     },
-    "128244": {
+    "244": {
       "content": "<|reserved_special_token_236|>",
       "lstrip": false,
       "normalized": false,
@@ -1960,7 +1960,7 @@
       "single_word": false,
       "special": true
     },
-    "128245": {
+    "245": {
       "content": "<|reserved_special_token_237|>",
       "lstrip": false,
       "normalized": false,
@@ -1968,7 +1968,7 @@
       "single_word": false,
       "special": true
     },
-    "128246": {
+    "246": {
       "content": "<|reserved_special_token_238|>",
       "lstrip": false,
       "normalized": false,
@@ -1976,7 +1976,7 @@
       "single_word": false,
       "special": true
     },
-    "128247": {
+    "247": {
       "content": "<|reserved_special_token_239|>",
       "lstrip": false,
       "normalized": false,
@@ -1984,7 +1984,7 @@
       "single_word": false,
       "special": true
     },
-    "128248": {
+    "248": {
       "content": "<|reserved_special_token_240|>",
       "lstrip": false,
       "normalized": false,
@@ -1992,7 +1992,7 @@
       "single_word": false,
       "special": true
     },
-    "128249": {
+    "249": {
       "content": "<|reserved_special_token_241|>",
       "lstrip": false,
       "normalized": false,
@@ -2000,7 +2000,7 @@
       "single_word": false,
       "special": true
     },
-    "128250": {
+    "250": {
       "content": "<|reserved_special_token_242|>",
       "lstrip": false,
       "normalized": false,
@@ -2008,7 +2008,7 @@
       "single_word": false,
       "special": true
     },
-    "128251": {
+    "251": {
       "content": "<|reserved_special_token_243|>",
       "lstrip": false,
       "normalized": false,
@@ -2016,7 +2016,7 @@
       "single_word": false,
       "special": true
     },
-    "128252": {
+    "252": {
       "content": "<|reserved_special_token_244|>",
       "lstrip": false,
       "normalized": false,
@@ -2024,7 +2024,7 @@
       "single_word": false,
       "special": true
     },
-    "128253": {
+    "253": {
       "content": "<|reserved_special_token_245|>",
       "lstrip": false,
       "normalized": false,
@@ -2032,7 +2032,7 @@
       "single_word": false,
       "special": true
     },
-    "128254": {
+    "254": {
       "content": "<|reserved_special_token_246|>",
       "lstrip": false,
       "normalized": false,
@@ -2040,7 +2040,7 @@
       "single_word": false,
       "special": true
     },
-    "128255": {
+    "255": {
       "content": "<|reserved_special_token_247|>",
       "lstrip": false,
       "normalized": false,
@@ -2052,7 +2052,7 @@
   "bos_token": "<|begin_of_text|>",
   "chat_template": "{{- bos_token }}\n{%- if custom_tools is defined %}\n    {%- set tools = custom_tools %}\n{%- endif %}\n{%- if not tools_in_user_message is defined %}\n    {%- set tools_in_user_message = true %}\n{%- endif %}\n{%- if not date_string is defined %}\n    {%- set date_string = \"26 Jul 2024\" %}\n{%- endif %}\n{%- if not tools is defined %}\n    {%- set tools = none %}\n{%- endif %}\n\n{#- This block extracts the system message, so we can slot it into the right place. #}\n{%- if messages[0]['role'] == 'system' %}\n    {%- set system_message = messages[0]['content']|trim %}\n    {%- set messages = messages[1:] %}\n{%- else %}\n    {%- set system_message = \"\" %}\n{%- endif %}\n\n{#- System message + builtin tools #}\n{{- \"<|start_header_id|>system<|end_header_id|>\\n\\n\" }}\n{%- if builtin_tools is defined or tools is not none %}\n    {{- \"Environment: ipython\\n\" }}\n{%- endif %}\n{%- if builtin_tools is defined %}\n    {{- \"Tools: \" + builtin_tools | reject('equalto', 'code_interpreter') | join(\", \") + \"\\n\\n\"}}\n{%- endif %}\n{{- \"Cutting Knowledge Date: December 2023\\n\" }}\n{{- \"Today Date: \" + date_string + \"\\n\\n\" }}\n{%- if tools is not none and not tools_in_user_message %}\n    {{- \"You have access to the following functions. To call a function, please respond with JSON for a function call.\" }}\n    {{- 'Respond in the format {\"name\": function name, \"parameters\": dictionary of argument name and its value}.' }}\n    {{- \"Do not use variables.\\n\\n\" }}\n    {%- for t in tools %}\n        {{- t | tojson(indent=4) }}\n        {{- \"\\n\\n\" }}\n    {%- endfor %}\n{%- endif %}\n{{- system_message }}\n{{- \"<|eot_id|>\" }}\n\n{#- Custom tools are passed in a user message with some extra guidance #}\n{%- if tools_in_user_message and not tools is none %}\n    {#- Extract the first user message so we can plug it in here #}\n    {%- if messages | length != 0 %}\n        {%- set first_user_message = messages[0]['content']|trim %}\n        {%- set messages = messages[1:] %}\n    {%- else %}\n        {{- raise_exception(\"Cannot put tools in the first user message when there's no first user message!\") }}\n{%- endif %}\n    {{- '<|start_header_id|>user<|end_header_id|>\\n\\n' -}}\n    {{- \"Given the following functions, please respond with a JSON for a function call \" }}\n    {{- \"with its proper arguments that best answers the given prompt.\\n\\n\" }}\n    {{- 'Respond in the format {\"name\": function name, \"parameters\": dictionary of argument name and its value}.' }}\n    {{- \"Do not use variables.\\n\\n\" }}\n    {%- for t in tools %}\n        {{- t | tojson(indent=4) }}\n        {{- \"\\n\\n\" }}\n    {%- endfor %}\n    {{- first_user_message + \"<|eot_id|>\"}}\n{%- endif %}\n\n{%- for message in messages %}\n    {%- if not (message.role == 'ipython' or message.role == 'tool' or 'tool_calls' in message) %}\n        {{- '<|start_header_id|>' + message['role'] + '<|end_header_id|>\\n\\n'+ message['content'] | trim + '<|eot_id|>' }}\n    {%- elif 'tool_calls' in message %}\n        {%- if not message.tool_calls|length == 1 %}\n            {{- raise_exception(\"This model only supports single tool-calls at once!\") }}\n        {%- endif %}\n        {%- set tool_call = message.tool_calls[0].function %}\n        {%- if builtin_tools is defined and tool_call.name in builtin_tools %}\n            {{- '<|start_header_id|>assistant<|end_header_id|>\\n\\n' -}}\n            {{- \"<|python_tag|>\" + tool_call.name + \".call(\" }}\n            {%- for arg_name, arg_val in tool_call.arguments | items %}\n                {{- arg_name + '=\"' + arg_val + '\"' }}\n                {%- if not loop.last %}\n                    {{- \", \" }}\n                {%- endif %}\n                {%- endfor %}\n            {{- \")\" }}\n        {%- else  %}\n            {{- '<|start_header_id|>assistant<|end_header_id|>\\n\\n' -}}\n            {{- '{\"name\": \"' + tool_call.name + '\", ' }}\n            {{- '\"parameters\": ' }}\n            {{- tool_call.arguments | tojson }}\n            {{- \"}\" }}\n        {%- endif %}\n        {%- if builtin_tools is defined %}\n            {#- This means we're in ipython mode #}\n            {{- \"<|eom_id|>\" }}\n        {%- else %}\n            {{- \"<|eot_id|>\" }}\n        {%- endif %}\n    {%- elif message.role == \"tool\" or message.role == \"ipython\" %}\n        {{- \"<|start_header_id|>ipython<|end_header_id|>\\n\\n\" }}\n        {%- if message.content is mapping or message.content is iterable %}\n            {{- message.content | tojson }}\n        {%- else %}\n            {{- message.content }}\n        {%- endif %}\n        {{- \"<|eot_id|>\" }}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|start_header_id|>assistant<|end_header_id|>\\n\\n' }}\n{%- endif %}\n",
   "clean_up_tokenization_spaces": true,
-  "eos_token": "<|eot_id|>",
+  "eos_token": "<|end_of_text|>",
   "extra_special_tokens": {},
   "model_input_names": [
     "input_ids",
