@@ -67,8 +67,8 @@ class DogeConfig(PretrainedConfig):
                     The original max position embeddings used during pretraining.
                 `attention_factor` (`float`, *optional*):
                     Used with 'yarn' and 'longrope'. The scaling factor to be applied on the attention
-                    computation. If unspecified, it defaults to value recommended by the implementation, using the
-                    `factor` field to infer the suggested value.
+                    computation. 
+                    If unspecified, it defaults to value recommended by the implementation, using the `factor` field to infer the suggested value.
                 `beta_fast` (`float`, *optional*):
                     Only used with 'yarn'. Parameter to set the boundary for extrapolation (only) in the linear
                     ramp function. If unspecified, it defaults to 32.
@@ -76,13 +76,11 @@ class DogeConfig(PretrainedConfig):
                     Only used with 'yarn'. Parameter to set the boundary for interpolation (only) in the linear
                     ramp function. If unspecified, it defaults to 1.
                 `short_factor` (`List[float]`, *optional*):
-                    Only used with 'longrope'. The scaling factor to be applied to short contexts (<
-                    `original_max_position_embeddings`). Must be a list of numbers with the same length as the hidden
-                    size divided by the number of attention heads divided by 2
+                    Only used with 'longrope'. The scaling factor to be applied to short contexts (<`original_max_position_embeddings`). 
+                    Must be a list of numbers with the same length as the hidden size divided by the number of attention heads divided by 2
                 `long_factor` (`List[float]`, *optional*):
-                    Only used with 'longrope'. The scaling factor to be applied to long contexts (<
-                    `original_max_position_embeddings`). Must be a list of numbers with the same length as the hidden
-                    size divided by the number of attention heads divided by 2
+                    Only used with 'longrope'. The scaling factor to be applied to long contexts (<`original_max_position_embeddings`). 
+                    Must be a list of numbers with the same length as the hidden size divided by the number of attention heads divided by 2
                 `low_freq_factor` (`float`, *optional*):
                     Only used with 'llama3'. Scaling factor applied to low frequency components of the RoPE
                 `high_freq_factor` (`float`, *optional*):
@@ -105,13 +103,12 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
         num_key_value_heads (`int`, *optional*, defaults to `None`):
-            This is the number of key_value heads that should be used to implement Grouped Query Attention. If
-            `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
-            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
-            converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
-            by meanpooling all the original heads within that group. For more details checkout [this
-            paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to
-            `num_attention_heads`.
+            This is the number of key_value heads that should be used to implement Grouped Query Attention. 
+            If `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. 
+            When converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed by meanpooling all the original heads within that group. 
+            For more details checkout [this paper](https://arxiv.org/pdf/2305.13245.pdf). 
+            If it is not specified, will default to `num_attention_heads`.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
         is_moe (`bool`, *optional*, defaults to `False`):
