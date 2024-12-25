@@ -32,8 +32,7 @@ class DogeConfig(PretrainedConfig):
 
     Args:
         vocab_size (`int`, *optional*, defaults to 32768):
-            Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the
-            `inputs_ids` passed when calling [`DogeModel`]
+            Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the `inputs_ids` passed when calling [`DogeModel`]
         num_channels (`int`, *optional*, defaults to 3):
             Number of channels in the input image.
         patch_size (`int`, *optional*, defaults to 16):
@@ -55,20 +54,17 @@ class DogeConfig(PretrainedConfig):
         rope_theta (`float`, *optional*, defaults to 10000.0):
             The base period of the RoPE embeddings.
         rope_scaling (`Dict`, *optional*):
-            Dictionary containing the scaling configuration for the RoPE embeddings. NOTE: if you apply new rope type
-            and you expect the model to work on longer `max_position_embeddings`, we recommend you to update this value
-            accordingly.
+            Dictionary containing the scaling configuration for the RoPE embeddings. 
+            NOTE: if you apply new rope type and you expect the model to work on longer `max_position_embeddings`, we recommend you to update this value accordingly.
             Expected contents:
                 `rope_type` (`str`):
-                    The sub-variant of RoPE to use. Can be one of ['default', 'linear', 'dynamic', 'yarn', 'longrope',
-                    'llama3'], with 'default' being the original RoPE implementation.
+                    The sub-variant of RoPE to use. Can be one of ['default', 'linear', 'dynamic', 'yarn', 'longrope', 'llama3'], with 'default' being the original RoPE implementation.
                 `factor` (`float`, *optional*):
-                    Used with all rope types except 'default'. The scaling factor to apply to the RoPE embeddings. In
-                    most scaling types, a `factor` of x will enable the model to handle sequences of length x *
-                    original maximum pre-trained length.
+                    Used with all rope types except 'default'. The scaling factor to apply to the RoPE embeddings. 
+                    In most scaling types, a `factor` of x will enable the model to handle sequences of length x * original maximum pre-trained length.
                 `original_max_position_embeddings` (`int`, *optional*):
-                    Used with 'dynamic', 'longrope' and 'llama3'. The original max position embeddings used during
-                    pretraining.
+                    Used with 'dynamic', 'longrope' and 'llama3'. 
+                    The original max position embeddings used during pretraining.
                 `attention_factor` (`float`, *optional*):
                     Used with 'yarn' and 'longrope'. The scaling factor to be applied on the attention
                     computation. If unspecified, it defaults to value recommended by the implementation, using the
@@ -146,13 +142,17 @@ class DogeConfig(PretrainedConfig):
         hidden_act="silu",
         max_position_embeddings=2048,
         rope_theta=10000.0,
-        rope_scaling=None,
+        rope_scaling={
+            "rope_type": "dynamic",
+            "factor": 4.0,
+            "original_max_position_embeddings": 2048,
+        },
         initializer_range=0.02,
         rms_norm_eps=1e-06,
         use_cache=True,
-        pad_token_id=0,
-        bos_token_id=1,
-        eos_token_id=2,
+        bos_token_id=0,
+        eos_token_id=1,
+        pad_token_id=2,
         tie_word_embeddings=True,
         num_attention_heads=8,
         num_key_value_heads=None,
@@ -199,9 +199,9 @@ class DogeConfig(PretrainedConfig):
         rope_config_validation(self)
 
         super().__init__(
-            pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
             eos_token_id=eos_token_id,
+            pad_token_id=pad_token_id,
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
