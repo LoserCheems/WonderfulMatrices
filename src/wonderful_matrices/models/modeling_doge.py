@@ -331,6 +331,8 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
         is_causal = True if causal_mask is None and q_len > 1 else False
 
+        # NOTE: As of pytorch 2.5.1, cuDNN's SDPA backward pass is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
+        torch.backends.cuda.enable_cudnn_sdp = False
         attn_output = F.scaled_dot_product_attention(
             query_states,
             key_states,
