@@ -70,7 +70,7 @@ def main(args):
         **hyperparameters['model_config']
     )
     model = DogeForCausalLM(config=config)
-    if args.bf16:
+    if hyperparameters['training_args']['bf16']:
         model = model.to(dtype=torch.bfloat16)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
