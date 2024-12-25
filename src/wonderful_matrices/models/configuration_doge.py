@@ -179,9 +179,9 @@ class DogeConfig(PretrainedConfig):
         self.initializer_range = initializer_range
         self.rms_norm_eps = rms_norm_eps
         self.use_cache = use_cache
-        self.pad_token_id = pad_token_id
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
+        self.pad_token_id = pad_token_id
         self.tie_word_embeddings = tie_word_embeddings
         self.num_attention_heads = num_attention_heads
         self.num_key_value_heads = num_key_value_heads
