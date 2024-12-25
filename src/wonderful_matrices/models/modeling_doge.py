@@ -332,7 +332,7 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         is_causal = True if causal_mask is None and q_len > 1 else False
 
         # NOTE: As of pytorch 2.5.1, cuDNN's SDPA backward pass is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
-        torch.backends.cuda.enable_cudnn_sdp = False
+        torch.backends.cuda.enable_cudnn_sdp(False)
         attn_output = F.scaled_dot_product_attention(
             query_states,
             key_states,
