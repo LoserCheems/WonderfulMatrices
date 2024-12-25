@@ -1048,61 +1048,8 @@ class DogeForCausalVLM(DogeForCausalLM):
         num_logits_to_keep: int = 0,
         **loss_kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
-        if input_ids is not None:
-            inputs_embeds = self.get_input_embeddings()(input_ids)
-
-        if pixel_values is not None:
-            pixel_embeds = self.pixel_embed(pixel_values)
-            inputs_embeds = torch.cat([pixel_embeds, inputs_embeds], dim=1)
-            attention_mask = torch.cat([torch.ones(pixel_embeds.shape[:2], device=pixel_embeds.device), attention_mask], dim=1)
-
-            past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
-            cache_position = torch.arange(
-                past_seen_tokens,
-                past_seen_tokens + inputs_embeds.shape[1],
-                device=inputs_embeds.device,
-            )
-            position_ids = cache_position.unsqueeze(0)
-
-        # decoder output consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        outputs = self.model(
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-            cache_position=cache_position,
-        )
-
-        hidden_states = outputs[0]
-
-        # only compute necessary logits, and do not upcast them to float if we are not computing the loss
-        logits = self.lm_head(hidden_states[:, -num_logits_to_keep:, :])
-
-        loss = None
-        if labels is not None:
-            loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.vocab_size, **loss_kwargs)
-
-        if not return_dict:
-            output = (logits,) + outputs[1:]
-            return (loss,) + output if loss is not None else output
-
-        return CausalLMOutputWithPast(
-            loss=loss,
-            logits=logits,
-            past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        # TODO: @wubingheng111: refer to Llava for implementating the forward method
+        ...
     
     def prepare_inputs_for_generation(
         self,
