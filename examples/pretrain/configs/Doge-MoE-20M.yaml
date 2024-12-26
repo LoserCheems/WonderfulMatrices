@@ -10,7 +10,7 @@ model_config:
   use_cache: True
   tie_word_embeddings: True
   num_attention_heads: 2
-  num_key_value_heads: 2
+  num_key_value_heads: 1
   is_moe: True
   num_cdmmoe_experts: 512
   num_cdmmoe_heads: 1

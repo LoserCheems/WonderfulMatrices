@@ -10,7 +10,7 @@ model_config:
   use_cache: True
   tie_word_embeddings: True
   num_attention_heads: 8
-  num_key_value_heads: 8
+  num_key_value_heads: 4
 
 training_args:
   seed: 233
