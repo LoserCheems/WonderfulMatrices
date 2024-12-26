@@ -51,8 +51,9 @@ def main(args):
     # Load dataset
     ################################
     dataset = datasets.load_from_disk(hyperparameters['training_args']['dataset_path'])
-    if len(dataset['train']) > hyperparameters['training_args']['per_device_train_batch_size'] * hyperparameters['training_args']['gradient_accumulation_steps'] * hyperparameters['training_args']['max_train_steps']:
-        dataset['train'] = dataset['train'].select(range(hyperparameters['training_args']['per_device_train_batch_size'] * hyperparameters['training_args']['gradient_accumulation_steps'] * hyperparameters['training_args']['max_train_steps']))
+    total_train_samples = hyperparameters['training_args']['per_device_train_batch_size'] * hyperparameters['training_args']['gradient_accumulation_steps'] * hyperparameters['training_args']['max_train_steps']
+    if len(dataset['train']) > total_train_samples:
+        dataset['train'] = dataset['train'].select(range(total_train_samples))
     logger.info(
         f"Training dataset: {len(dataset['train'])} samples, Evaluation dataset: {len(dataset['test'])} samples."
     )
