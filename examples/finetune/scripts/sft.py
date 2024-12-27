@@ -51,12 +51,6 @@ def main(args):
     # Load dataset
     ################################
     dataset = datasets.load_from_disk(hyperparameters['finetuning_args']['dataset_path'])
-    if hyperparameters['finetuning_args']['per_epoch_max_steps'] != -1:
-        # 这样截断的目的是, 指定固定的训练步数, 进行多轮次训练.
-        # The purpose of truncating like this is to specify a fixed number of training steps for multiple epochs.
-        # 如果进行多节点训练, 需要自行在配置文件中将batch_size * gradient_accumulation_steps / world_size
-        # If multi-node training is performed, you need to manually set batch_size * gradient_accumulation_steps / world_size in the configuration file
-        dataset["train"] = dataset["train"].select(range(hyperparameters['finetuning_args']['per_epoch_max_steps'] * hyperparameters['finetuning_args']['per_device_train_batch_size'] * hyperparameters['finetuning_args']['gradient_accumulation_steps']))
     logger.info(
         f"Training dataset: {len(dataset['train'])} samples, Evaluation dataset: {len(dataset['test'])} samples."
     )
@@ -66,7 +60,6 @@ def main(args):
     # Load tokenizer
     ################################
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
-    tokenizer.truncation_side = 'left'
 
     ################################
     # 加载预训练模型
@@ -205,8 +198,8 @@ def main(args):
 if __name__ == "__main__":
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-197M', help='pretrained model name or path')
-    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-197M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-20M', help='pretrained model name or path')
+    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-20M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='./logs')
     arg_parser.add_argument('--output_dir', type=str, default='./results')
     arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="path to checkpoint to resume training")
