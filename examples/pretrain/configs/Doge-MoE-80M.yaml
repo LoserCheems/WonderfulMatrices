@@ -34,4 +34,4 @@ training_args:
   save_steps: 1000
   bf16: True
   max_grad_norm: 1.0
-  gradient_accumulation_steps: 256
+  gradient_accumulation_steps: 512
