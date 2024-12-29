@@ -21,8 +21,12 @@ training_args:
   do_eval: True
   eval_steps: 100
   per_device_eval_batch_size: 1
+  optim: "adamw_torch_fused"
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1e-8
   learning_rate: 0.002
-  warmup_ratio: 0.1
+  warmup_ratio: 0.001
   min_lr_rate: 0.1
   weight_decay: 0.01
   save_safetensors: True
