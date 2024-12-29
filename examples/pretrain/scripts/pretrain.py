@@ -116,7 +116,6 @@ def main(args):
             'num_warmup_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['warmup_ratio'], 
             'num_training_steps': hyperparameters['training_args']['max_train_steps'],
             'num_cooldown_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['cooldown_ratio'],
-            'cooldown_type': hyperparameters['training_args']['cooldown_type']
         },
         weight_decay=hyperparameters['training_args']['weight_decay'],
 
