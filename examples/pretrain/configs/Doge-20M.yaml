@@ -26,8 +26,8 @@ training_args:
   adam_beta2: 0.95
   adam_epsilon: 1.0e-8
   learning_rate: 0.008
-  warmup_ratio: 0.01
-  min_lr_rate: 0.1
+  warmup_ratio: 0.02
+  cooldown_ratio: 0.2
   weight_decay: 0.01
   save_safetensors: True
   save_steps: 1000

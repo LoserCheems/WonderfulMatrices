@@ -111,8 +111,13 @@ def main(args):
         adam_epsilon=hyperparameters['training_args']['adam_epsilon'],
         learning_rate=hyperparameters['training_args']['learning_rate'],
         warmup_ratio=hyperparameters['training_args']['warmup_ratio'],
-        lr_scheduler_type="cosine_with_min_lr",
-        lr_scheduler_kwargs={'min_lr_rate': hyperparameters['training_args']['min_lr_rate']},
+        lr_scheduler_type="warmup_stable_cooldown",
+        lr_scheduler_kwargs={
+            'num_warmup_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['warmup_ratio'], 
+            'num_training_steps': hyperparameters['training_args']['max_train_steps'],
+            'num_cooldown_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['cooldown_ratio'],
+            'cooldown_type': hyperparameters['training_args']['cooldown_type']
+        },
         weight_decay=hyperparameters['training_args']['weight_decay'],
 
         # 保存策略
