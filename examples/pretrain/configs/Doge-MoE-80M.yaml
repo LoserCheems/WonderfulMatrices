@@ -28,7 +28,7 @@ training_args:
   per_device_eval_batch_size: 1
   learning_rate: 0.0006
   warmup_ratio: 0.1
-  min_lr_rate: 0.1
+  cooldown_ratio: 0.1
   weight_decay: 0.01
   save_safetensors: True
   save_steps: 1000
