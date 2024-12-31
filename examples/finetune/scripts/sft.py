@@ -51,6 +51,8 @@ def main(args):
     # Load dataset
     ################################
     dataset = datasets.load_from_disk(hyperparameters['finetuning_args']['dataset_path'])
+    if hyperparameters['finetuning_args']['num_train_steps'] != -1:
+        dataset['train'] = dataset['train'].select(range(hyperparameters['finetuning_args']['num_train_steps']))
     logger.info(
         f"Training dataset: {len(dataset['train'])} samples, Evaluation dataset: {len(dataset['test'])} samples."
     )
