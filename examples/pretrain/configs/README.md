@@ -9,7 +9,7 @@ pipeline_tag: text-generation
 ---
 
 
-# **Doge 60M**
+# **Doge 20M**
 
 Doge is an ongoing research project where we aim to train a series of small language models to further explore whether the Transformer framework allows for more complex feedforward network structures, enabling the model to have fewer cache states and larger knowledge capacity.
 
@@ -21,8 +21,8 @@ In addition, Doge uses Dynamic Mask Attention as sequence transformation and can
 ```python
 >>> from transformers import AutoTokenizer, AutoModelForCausalLM
 
->>> tokenizer = AutoTokenizer.from_pretrained("JingzeShi/Doge-60M")
->>> model = AutoModelForCausalLM.from_pretrained("JingzeShi/Doge-60M", trust_remote_code=True)
+>>> tokenizer = AutoTokenizer.from_pretrained("JingzeShi/Doge-20M")
+>>> model = AutoModelForCausalLM.from_pretrained("JingzeShi/Doge-20M", trust_remote_code=True)
 >>> inputs = tokenizer("Hey how are you doing?", return_tensors="pt")
 
 >>> out = model.generate(**inputs, max_new_tokens=100)
@@ -37,19 +37,25 @@ In addition, Doge uses Dynamic Mask Attention as sequence transformation and can
 > TODO: The larger model is under training and will be uploaded soon.
 
 **Training**:
-| Model | Training Data | Epochs | Steps | Content Length | Tokens | LR | Batch Size | Precision |
-|---|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/JingzeShi/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 2 | 10k | 2048 | 5B | 8e-4 | 0.25M | bfloat16 |
-| [Doge-60M](https://huggingface.co/JingzeShi/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 2 | 20k | 2048 | 20B | 6e-4 | 0.5M | bfloat16 |
+
+| Model | Training Data | Steps | Content Length | Tokens | LR | Batch Size | Precision |
+|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/JingzeShi/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 |
 
 **Evaluation**:
-| Model | TriviaQA | MMLU | ARC | PIQA | HellaSwag | OBQA | Winogrande |
-|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/JingzeShi/Doge-20M) | - | 26.01 | 36.15 | 56.26 | 26.60 | 26.60 | 50.12 |
-| [Doge-60M](https://huggingface.co/JingzeShi/Doge-60M) | - | 25.81 | 45.49 | 61.37 | 29.65 | 27.40 | 52.57 |
+
+| Model | MMLU | TriviaQA | ARC-E | ARC-C | PIQA | HellaSwag | OBQA | Winogrande |
+|---|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/JingzeShi/Doge-20M) | 25.43 | 0 | 36.83 | 22.53 | 58.38 | 27.25 | 25.60 | 50.20 |
+
+**Procedure**:
+
+[<img src="https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-28.svg" alt="Visualize in Weights & Biases" width="150" height="24"/>](https://wandb.ai/loser_cheems/huggingface/runs/p8x93v5l) 
+
 
 **Environment**:
-- Image: nvcr.io/nvidia/pytorch:24.10-py3
+
+- Image: nvcr.io/nvidia/pytorch:24.12-py3
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers
 

@@ -27,8 +27,12 @@ training_args:
   eval_steps: 100
   per_device_eval_batch_size: 1
   learning_rate: 0.0006
+  lr_scheduler_type: "warmup_stable_decay"
+  warmup_type: "linear"
   warmup_ratio: 0.1
-  cooldown_ratio: 0.1
+  decay_type: "linear"
+  decay_ratio: 0.1
+  min_lr_ratio: 0.0
   weight_decay: 0.01
   save_safetensors: True
   save_steps: 1000
