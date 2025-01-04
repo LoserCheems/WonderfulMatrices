@@ -110,13 +110,14 @@ def main(args):
         adam_beta2=hyperparameters['training_args']['adam_beta2'],
         adam_epsilon=hyperparameters['training_args']['adam_epsilon'],
         learning_rate=hyperparameters['training_args']['learning_rate'],
-        warmup_ratio=hyperparameters['training_args']['warmup_ratio'],
-        lr_scheduler_type="warmup_stable_cooldown",
+        lr_scheduler_type=hyperparameters['training_args']['lr_scheduler_type'],
         lr_scheduler_kwargs={
-            'num_warmup_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['warmup_ratio'], 
-            'num_training_steps': hyperparameters['training_args']['max_train_steps'],
-            'num_cooldown_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['cooldown_ratio'],
+            'num_decay_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['decay_ratio'],
+            'warmup_type': hyperparameters['training_args']['warmup_type'],
+            'decay_type': hyperparameters['training_args']['decay_type'],
+            'min_lr_ratio': hyperparameters['training_args']['min_lr_ratio'],
         },
+        warmup_ratio=hyperparameters['training_args']['warmup_ratio'],
         weight_decay=hyperparameters['training_args']['weight_decay'],
 
         # 保存策略
