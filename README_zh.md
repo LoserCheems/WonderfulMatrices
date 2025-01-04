@@ -43,7 +43,9 @@ limitations under the License. -->
 
 ## 关于
 
-本项目是对 [Wonderful Matrices](https://arxiv.org/abs/2412.11834) 论文中, 讨论章节部分的延续研究.
+本项目除了提供了 [Wonderful Matrices](https://arxiv.org/abs/2412.11834) 论文中模块和架构的实现代码外, 还是讨论章节部分的延续研究.
+
+`Doge` 架构是使用 `动态掩码自注意力` 的Transformer模型, 它可以理解为在训练时使用自注意力来训练, 并使用状态空间来推理.
 
 我们希望通过训练 `Doge` 架构的小型语言模型(SLM), 来进一步探索 Transformer 框架是否允许更深更复杂的前馈网络结构, 从而使模型具有更少的缓存状态与更大的知识容量.
 
@@ -63,8 +65,8 @@ limitations under the License. -->
 当然你也可以使用开源的 [Docker PyTorch](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) 镜像, 来避免配置环境的麻烦.
 
 ```bash
-docker pull nvcr.io/nvidia/pytorch:24.10-py3
-docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:8888 -p 6006:6006 --ulimit memlock=-1 --ulimit stack=67108864 -v <你的代码路径>:/workspace -v <你的数据集路径>:/workspace/Doge/datasets nvcr.io/nvidia/pytorch:24.10-py3
+docker pull nvcr.io/nvidia/pytorch:24.12-py3
+docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:8888 -p 6006:6006 --ulimit memlock=-1 --ulimit stack=67108864 -v <你的代码路径>:/workspace -v <你的数据集路径>:/workspace/Doge/datasets nvcr.io/nvidia/pytorch:24.12-py3
 ```
 
 - `pip install transformers`: 后续所有工作的核心框架.

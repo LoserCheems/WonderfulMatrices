@@ -42,7 +42,9 @@ English | [简体中文](./README_zh.md)
 
 ## About
 
-This project is a continuation of the discussion section of the [Wonderful Matrices](https://arxiv.org/abs/2412.11834) paper.
+In addition to providing the implementation code of the modules and architectures in the [Wonderful Matrices](https://arxiv.org/abs/2412.11834) paper, this project is also a continuation of the discussion section.
+
+The `Doge` architecture is a Transformer model that uses `Dynamic Mask Attention` to understand training with self-attention and inference with state-space.
 
 We hope to further explore whether the Transformer framework allows for more complex feedforward network structures by training a small language model (SLM) based on the `Doge` architecture, enabling the model to have fewer cache states and larger knowledge capacity.
 
@@ -62,8 +64,8 @@ We highly recommend that you install the latest version of PyTorch and CUDA for 
 Of course, you can also use the open-source [Docker PyTorch](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) image to avoid the hassle of configuring the environment.
 
 ```bash
-docker pull nvcr.io/nvidia/pytorch:24.10-py3
-docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:8888 -p 6006:6006 --ulimit memlock=-1 --ulimit stack=67108864 -v <your code path>:/workspace -v <your datasets path>:/workspace/Doge/datasets nvcr.io/nvidia/pytorch:24.10-py3
+docker pull nvcr.io/nvidia/pytorch:24.12-py3
+docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:8888 -p 6006:6006 --ulimit memlock=-1 --ulimit stack=67108864 -v <your code path>:/workspace -v <your datasets path>:/workspace/Doge/datasets nvcr.io/nvidia/pytorch:24.12-py3
 ```
 
 - `pip install transformers`: The core framework for all subsequent work.
