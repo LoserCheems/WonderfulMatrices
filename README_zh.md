@@ -33,13 +33,6 @@ limitations under the License. -->
 > 石竞泽*, 吴冰珩*\
 > 论文: [arXiv:2412.11834](https://arxiv.org/abs/2412.11834)
 
-![Cheems](./assets/cheems_architecture.png)
-![Doge](./assets/doge_architecture.png)
-![DMAttn](./assets/dmattn.png)
-![DMAttn](./assets/mqar.png)
-![CDMoE](./assets/cdmoe.png)
-![CDMoE](./assets/merm.png)
-
 
 ## 关于
 
@@ -88,6 +81,8 @@ pip install -e .
 
 ### Cheems 架构
 
+![Cheems](./assets/cheems_architecture.png)
+
 Cheems 架构的建模代码.
 
 源代码: [modeling_cheems.py](./src/wonderful_matrices/models/modeling_cheems.py)
@@ -110,6 +105,8 @@ print(tokenizer.batch_decode(outputs))
 
 ### Doge 架构
 
+![Doge](./assets/doge_architecture.png)
+
 Doge 架构的建模代码.
 
 源代码: [modeling_doge.py](./src/wonderful_matrices/models/modeling_doge.py)
@@ -131,6 +128,9 @@ print(tokenizer.batch_decode(outputs))
 ```
 
 ### 动态掩码注意力 模块
+
+![DMAttn](./assets/dmattn.png)
+![DMAttn](./assets/mqar.png)
 
 Doge 模型的序列变换模块.
 
@@ -156,6 +156,9 @@ print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 ```
 
 ### 交叉领域混合专家 模块
+
+![CDMoE](./assets/cdmoe.png)
+![CDMoE](./assets/merm.png)
 
 Doge 模型的状态变换模块.
 

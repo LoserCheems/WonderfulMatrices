@@ -33,12 +33,6 @@ English | [简体中文](./README_zh.md)
 > Jingze Shi*, Bingheng Wu*\
 > Paper: [arXiv:2412.11834](https://arxiv.org/abs/2412.11834)
 
-![Cheems](./assets/cheems_architecture.png)
-![Doge](./assets/doge_architecture.png)
-![DMAttn](./assets/dmattn.png)
-![DMAttn](./assets/mqar.png)
-![CDMoE](./assets/cdmoe.png)
-![CDMoE](./assets/merm.png)
 
 ## About
 
@@ -88,6 +82,8 @@ You can use the following complete architecture or individual modules.
 
 ### Cheems Architecture
 
+![Cheems](./assets/cheems_architecture.png)
+
 The modeling code of the Cheems architecture.
 
 Source code: [modeling_cheems.py](./src/wonderful_matrices/models/modeling_cheems.py)
@@ -110,6 +106,8 @@ print(tokenizer.batch_decode(outputs))
 
 ### Doge Architecture
 
+![Doge](./assets/doge_architecture.png)
+
 The modeling code of the Doge architecture.
 
 Source code: [modeling_doge.py](./src/wonderful_matrices/models/modeling_doge.py)
@@ -131,6 +129,9 @@ print(tokenizer.batch_decode(outputs))
 ```
 
 ### Dynamic Mask Attention Module
+
+![DMAttn](./assets/dmattn.png)
+![DMAttn](./assets/mqar.png)
 
 The sequence transformation module of the Doge model.
 
@@ -156,6 +157,9 @@ print(f"Input shape: {x.shape}, Output shape: {y.shape}")
 ```
 
 ### Cross Domain Mixture of Experts Module
+
+![CDMoE](./assets/cdmoe.png)
+![CDMoE](./assets/merm.png)
 
 The state transformation module of the Doge model.
 
