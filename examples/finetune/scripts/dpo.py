@@ -59,14 +59,17 @@ def main(config_path):
     # 加载预训练模型
     # Load pretrained model
     ################################
-    logger.info(f"Loading model from {args["model_name_or_path"]}")
-    model = AutoModelForCausalLM.from_pretrained(args["model_name_or_path"], trust_remote_code=True)
+    logger.info(f"Loading model from {args['model_name_or_path']}")
     model_kwargs = dict(
         torch_dtype=args["torch_dtype"],
         use_cache=True,
     )
-    ref_model = model
-    ref_model_kwargs = model_kwargs
+    model = AutoModelForCausalLM.from_pretrained(args["model_name_or_path"], trust_remote_code=True, **model_kwargs)
+    ref_model_kwargs = dict(
+        torch_dtype=args["torch_dtype"],
+        use_cache=True,
+    )
+    ref_model = AutoModelForCausalLM.from_pretrained(args["model_name_or_path"], trust_remote_code=True, **ref_model_kwargs)
 
     model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
@@ -86,11 +89,6 @@ def main(config_path):
         report_to=args['report_to'],
         logging_steps=args['logging_steps'],
         output_dir=output_dir,
-
-        # 模型初始化
-        # Model initialization
-        model_init_kwargs=model_kwargs,
-        ref_model_init_kwargs=ref_model_kwargs,
 
         # 数据处理
         # Dataset processing
@@ -144,8 +142,8 @@ def main(config_path):
         model=model,
         ref_model=ref_model,
         args=dpo_config,
-        train_dataset=dataset['dataset_splits'][0],
-        eval_dataset=dataset['dataset_splits'][1] if args['do_eval'] else None,
+        train_dataset=dataset[args['dataset_splits'][0]],
+        eval_dataset=dataset[args['dataset_splits'][1]] if args['do_eval'] else None,
         processing_class=tokenizer,
     )
 
@@ -154,7 +152,7 @@ def main(config_path):
     # Training loop
     ################################
     logger.info("*** Start training... ***")
-    checkpoint = args.resume_from_checkpoint
+    checkpoint = args['resume_from_checkpoint']
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
     metrics = train_result.metrics
     metrics['train_samples'] = len(dataset['train'])
