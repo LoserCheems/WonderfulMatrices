@@ -60,6 +60,13 @@ def main(args):
         batched=True,
         desc="Applying chat template"
     )
+    dataset = dataset.rename_columns(
+        {
+            'text_prompt': "prompt",
+            'text_chosen': "chosen",
+            'text_rejected': "rejected"
+        }
+    )
     print(dataset)
     dataset.save_to_disk(args.save_dir + '/dpo_dataset')
 
@@ -68,7 +75,7 @@ if __name__ == '__main__':
     argparser = ArgumentParser()
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
-    argparser.add_argument("--tokenizer_path", type=str, default="./examples/tokenizer")
+    argparser.add_argument("--tokenizer_path", type=str, default="JingzeShi/Doge-tokenizer")
     argparser.add_argument("--num_proc", type=int, default=8)
     args = argparser.parse_args()
 
