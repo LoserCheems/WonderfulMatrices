@@ -7,7 +7,7 @@ import yaml
 import datasets
 import transformers
 from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
-from trl import SFTConfig, SFTTrainer, DPOConfig, DPOTrainer
+from trl import DPOConfig, DPOTrainer
 
 from wonderful_matrices.models import DogeConfig
 from wonderful_matrices.models import DogeModel, DogeForCausalLM
@@ -15,30 +15,27 @@ from wonderful_matrices.models import DogeModel, DogeForCausalLM
 
 logger = logging.getLogger(__name__)
 
-def main(args):
+def main(config_path):
 
-    # 获取配置中的超参数
-    # Get hyperparameters from config
-    with open(args.config_path, 'r', encoding='utf-8') as f:
-        hyperparameters = yaml.load(f, Loader=yaml.FullLoader)
+    # 获取配置中的参数
+    # Get arguments from config
+    with open(config_path, 'r', encoding='utf-8') as f:
+        args = yaml.load(f, Loader=yaml.FullLoader)
     
     # 设置日志与输出目录
     # Setup logging and output directory
-    model_name = args.config_path.split('/')[-1].split('.')[0]
-    logging_dir = f'{args.logging_dir}/{model_name}'
-    output_dir = f'{args.output_dir}/{model_name}'
+    model_name = config_path.split('/')[-1].split('.')[0]
+    logging_dir = f'{args["logging_dir"]}/{model_name}'
+    output_dir = f'{args["output_dir"]}/{model_name}'
 
     ################################
     # 设置日志
     # Setup Logging
     ################################
-    os.makedirs(logging_dir, exist_ok=True)
-    file_handler = logging.FileHandler(f'{logging_dir}/log.log')
-    stream_handler = logging.StreamHandler(sys.stdout)
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[file_handler, stream_handler],
+        handlers=[logging.StreamHandler(sys.stdout)],
         level=logging.INFO,
     )
     datasets.logging.set_verbosity(logging.INFO)
@@ -50,92 +47,105 @@ def main(args):
     # 加载数据集
     # Load dataset
     ################################
-    dataset = datasets.load_from_disk(hyperparameters['finetuning_args']['dataset_path'])
-    if hyperparameters['finetuning_args']['num_train_steps'] != -1:
-        dataset['train'] = dataset['train'].select(range(hyperparameters['finetuning_args']['num_train_steps'] * hyperparameters['finetuning_args']['per_device_train_batch_size'] * hyperparameters['finetuning_args']['gradient_accumulation_steps']))
-    logger.info(
-        f"Training dataset: {len(dataset['train'])} samples, Evaluation dataset: {len(dataset['test'])} samples."
-    )
+    dataset = datasets.load_from_disk(args['dataset_path'])
     
     ################################
     # 加载分词器
     # Load tokenizer
     ################################
-    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(args["model_name_or_path"])
 
     ################################
     # 加载预训练模型
     # Load pretrained model
     ################################
-    logger.info(f"Loading model from {args.pretrained_model_name_or_path}")
-    model = AutoModelForCausalLM.from_pretrained(args.pretrained_model_name_or_path, trust_remote_code=True)
+    logger.info(f"Loading model from {args["model_name_or_path"]}")
+    model = AutoModelForCausalLM.from_pretrained(args["model_name_or_path"], trust_remote_code=True)
+    model_kwargs = dict(
+        torch_dtype=args["torch_dtype"],
+        use_cache=True,
+    )
+    ref_model = model
+    ref_model_kwargs = model_kwargs
 
-    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
-    logger.info(f"Model parameters: {num_params}")
+    logger.info(f"Model parameters: {model_num_params}")
+    ref_model_num_params = sum(p.numel() for p in ref_model.parameters() if p.requires_grad)
+    logger.info(f"Reference model structure: {ref_model}")
+    logger.info(f"Reference model parameters: {ref_model_num_params}")
 
     ################################
-    # 设置监督微调参数
-    # Setup supervised finetuning arguments
+    # 设置 DPO 参数
+    # Setup DPO arguments
     ################################
-    sft_config = SFTConfig(
-        # 随机种子与路径
-        # Random seed and paths
-        seed=hyperparameters['finetuning_args']['seed'],
+    dpo_config = DPOConfig(
+        # 日志与输出
+        # Logging and Output
         logging_dir=logging_dir,
-        logging_steps=hyperparameters['finetuning_args']['logging_steps'],
+        report_to=args['report_to'],
+        logging_steps=args['logging_steps'],
         output_dir=output_dir,
 
-        # 训练轮次与每个设备的批次
-        # Training epochs and per device batch size
-        do_train=True,
-        num_train_epochs=hyperparameters['finetuning_args']['num_train_epochs'],
-        per_device_train_batch_size=hyperparameters['finetuning_args']['per_device_train_batch_size'],
+        # 模型初始化
+        # Model initialization
+        model_init_kwargs=model_kwargs,
+        ref_model_init_kwargs=ref_model_kwargs,
 
-        # 评估策略与评估步数
-        # Evaluation strategy and evaluation steps
-        do_eval=hyperparameters['finetuning_args']['do_eval'],
-        eval_strategy="steps" if hyperparameters['finetuning_args']['do_eval'] else "no",
-        eval_steps=hyperparameters['finetuning_args']['eval_steps'],
-        per_device_eval_batch_size=hyperparameters['finetuning_args']['per_device_eval_batch_size'],
+        # 数据处理
+        # Dataset processing
+        dataset_num_proc=args['preprocessing_num_workers'],
+        max_length=args['max_length'],
+        max_prompt_length=args['max_prompt_length'],
+
+        # 种子
+        # Seed
+        seed=args['seed'],
+
+        # 训练设置
+        # Training settings
+        do_train=args['do_train'],
+        num_train_epochs=args['num_train_epochs'],
+        per_device_train_batch_size=args['per_device_train_batch_size'],
+
+        # 评估设置
+        # Evaluation settings
+        do_eval=args['do_eval'],
+        eval_strategy=args['eval_strategy'],
+        eval_steps=args['eval_steps'],
+        per_device_eval_batch_size=args['per_device_eval_batch_size'],
         
         # 学习策略
         # Learning strategy
-        learning_rate=hyperparameters['finetuning_args']['learning_rate'],
-        warmup_ratio=hyperparameters['finetuning_args']['warmup_ratio'],
-        lr_scheduler_type="cosine_with_min_lr",
-        lr_scheduler_kwargs={'min_lr_rate': hyperparameters['finetuning_args']['min_lr_rate']},
-        weight_decay=hyperparameters['finetuning_args']['weight_decay'],
+        optim=args['optim'],
+        beta=args['beta'],
+        loss_type=args['loss_type'],
+        learning_rate=args['learning_rate'],
+        lr_scheduler_type=args['lr_scheduler_type'],
+        lr_scheduler_kwargs={**args['lr_scheduler_kwargs']},
+        warmup_ratio=args['warmup_ratio'],
+        weight_decay=args['weight_decay'],
+        gradient_accumulation_steps=args['gradient_accumulation_steps'],
+        max_grad_norm=args['max_grad_norm'],
+        bf16=args['bf16'],
 
         # 保存策略
         # Save strategy
-        save_safetensors=True,
-        save_strategy="steps",
-        save_steps=hyperparameters['finetuning_args']['save_steps'],
-
-        # 混合精度与梯度累积
-        # Mixed precision and gradient accumulation
-        bf16=hyperparameters['finetuning_args']['bf16'],
-        gradient_accumulation_steps=hyperparameters['finetuning_args']['gradient_accumulation_steps'],
-        max_grad_norm=hyperparameters['finetuning_args']['max_grad_norm'],
-
-        # 数据集处理策略
-        # Dataset processing strategy
-        dataset_text_field="text",
-        dataset_num_proc=hyperparameters['finetuning_args']['dataset_num_proc'],
-        max_seq_length=hyperparameters['finetuning_args']['max_seq_length'],
-        packing=hyperparameters['finetuning_args']['packing'],
+        save_safetensors=args['save_safetensors'],
+        save_strategy=args['save_strategy'],
+        save_steps=args['save_steps'],
     )
 
     ################################
     # 初始化训练器
     # Initialize the trainer
     ################################
-    trainer = SFTTrainer(
+    trainer = DPOTrainer(
         model=model,
-        args=sft_config,
-        train_dataset=dataset['train'],
-        eval_dataset=dataset['test'] if hyperparameters['finetuning_args']['do_eval'] else None,
+        ref_model=ref_model,
+        args=dpo_config,
+        train_dataset=dataset['dataset_splits'][0],
+        eval_dataset=dataset['dataset_splits'][1] if args['do_eval'] else None,
         processing_class=tokenizer,
     )
 
@@ -166,19 +176,19 @@ def main(args):
         trainer.model.config.save_pretrained(output_dir)
         logger.info(f"Model card saved to {output_dir}")
     
-    logger.info("*** Training finished! ***")
+    logger.info("*** Training complete ***")
 
     ################################
     # 评估
     # Evaluation
     ################################
-    if sft_config.do_eval:
+    if dpo_config.do_eval:
         logger.info("*** Start evaluation... ***")
         metrics = trainer.evaluate()
         metrics['eval_samples'] = len(dataset['test'])
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
-        logger.info("*** Evaluation finished! ***")
+        logger.info("*** Evaluation complete ***")
     
     ################################
     # 注册模型并保存
@@ -196,16 +206,21 @@ def main(args):
     model.save_pretrained(f"{output_dir}-registered")
     logger.info(f"Model registered and saved to {output_dir}-registered")
 
+    if args["push_to_hub"] is True:
+        logger.info("Pushing to hub...")
+        tokenizer.push_to_hub()
+        model.push_to_hub()
+    
+    logger.info("*** Training finished! ***")
+
+
+
 
 if __name__ == "__main__":
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-20M', help='pretrained model name or path')
-    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-20M.yaml', help='path to yaml config file')
-    arg_parser.add_argument('--logging_dir', type=str, default='./logs')
-    arg_parser.add_argument('--output_dir', type=str, default='./results')
-    arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="path to checkpoint to resume training")
+    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-20M-Instruct-DPO.yaml', help='path to yaml config file')
 
     args = arg_parser.parse_args()
 
-    main(args)
+    main(args.config_path)
