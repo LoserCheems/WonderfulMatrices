@@ -1,5 +1,5 @@
 from transformers import AutoTokenizer
-from datasets import load_from_disk
+from datasets import load_from_disk, DatasetDict
 from argparse import ArgumentParser
 
 
@@ -49,6 +49,10 @@ def main(args):
     dataset.save_to_disk(args.save_dir + '/sft_dataset')
 
     dataset = load_from_disk(args.datasets_dir + '/ultrafeedback_binarized')
+    dataset = DatasetDict({
+        'train': dataset['train_prefs'],
+        'test': dataset['test_prefs']
+    })
     columns = dataset['train'].column_names
     dataset = dataset.map(
         process_ultrafeedback_binarized, 
