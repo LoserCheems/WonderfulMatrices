@@ -7,24 +7,24 @@ report_to:
 output_dir: ./results
 
 # Model arguments
-model_name_or_path: JingzeShi/Doge-20M
+model_name_or_path: JingzeShi/Doge-20M-Instruct
 torch_dtype: bfloat16
 resume_from_checkpoint: null
 
 # Dataset arguments
-dataset_path: ./datasets/sft_dataset
+dataset_path: ./datasets/dpo_dataset
 dataset_splits:
 - train
 - test
 preprocessing_num_workers: 12
-max_seq_length: 8192
-packing: True
+max_length: 1024
+max_prompt_length: 512
 
-# SFTTrainer arguments
+# DPOTrainer arguments
 seed: 233
 
 do_train: True
-num_train_epochs: 2
+num_train_epochs: 3
 per_device_train_batch_size: 1
 
 do_eval: True
@@ -33,7 +33,9 @@ eval_steps: 100
 per_device_eval_batch_size: 1
 
 optim: adamw_torch
-learning_rate: 8.0e-4
+beta: 0.5
+loss_type: sigmoid
+learning_rate: 1.0e-6
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1

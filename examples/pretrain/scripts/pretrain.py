@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import yaml
 import datasets
 import torch
-import transformers
+import transformers.optimization
 from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
 from wonderful_matrices.models.configuration_doge import DogeConfig

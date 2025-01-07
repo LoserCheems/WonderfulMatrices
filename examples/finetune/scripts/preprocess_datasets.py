@@ -1,5 +1,5 @@
 from transformers import AutoTokenizer
-from datasets import load_from_disk
+from datasets import load_from_disk, DatasetDict
 from argparse import ArgumentParser
 
 
@@ -11,13 +11,35 @@ def process_smoltalk(example, tokenizer):
     )
     return example
 
+def process_ultrafeedback_binarized(example, tokenizer):
+        
+    prompt_messages = example["chosen"][:-1]
+    # Now we extract the final turn to define chosen/rejected responses
+    chosen_messages = example["chosen"][-1:]
+    rejected_messages = example["rejected"][-1:]
+
+    example['text_prompt'] = tokenizer.apply_chat_template(
+        prompt_messages,
+        tokenize=False,
+    )
+    example['text_chosen'] = tokenizer.apply_chat_template(
+        chosen_messages,
+        tokenize=False,
+    ).replace('<|begin_of_text|><|start_header_id|>system<|end_header_id|>\nCutting Knowledge Date: December 2024\nToday Date: December 2024\n<|end_of_text|>\n\n', '')
+    example['text_rejected'] = tokenizer.apply_chat_template(
+        rejected_messages,
+        tokenize=False,
+    ).replace('<|begin_of_text|><|start_header_id|>system<|end_header_id|>\nCutting Knowledge Date: December 2024\nToday Date: December 2024\n<|end_of_text|>\n\n', '')
+
+    return example
+
+
 def main(args):
-    dataset = load_from_disk(args.datasets_dir + '/smoltalk')
-    # 保留原始数据集的列名, 以便后续删除多余列
-    # Keep the column names of the original dataset for later removal of redundant columns
-    columns = dataset['train'].column_names
+
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
 
+    dataset = load_from_disk(args.datasets_dir + '/smoltalk')
+    columns = dataset['train'].column_names
     dataset = dataset.map(
         process_smoltalk, 
         fn_kwargs={
@@ -29,13 +51,40 @@ def main(args):
         desc="Applying chat template"
     )
     print(dataset)
-    dataset.save_to_disk(args.save_dir + '/finetune_dataset')
+    dataset.save_to_disk(args.save_dir + '/sft_dataset')
+
+    dataset = load_from_disk(args.datasets_dir + '/ultrafeedback_binarized')
+    dataset = DatasetDict({
+        'train': dataset['train_prefs'],
+        'test': dataset['test_prefs']
+    })
+    columns = dataset['train'].column_names
+    dataset = dataset.map(
+        process_ultrafeedback_binarized, 
+        fn_kwargs={
+            'tokenizer': tokenizer
+        },
+        num_proc=args.num_proc,
+        remove_columns=columns,
+        batched=False,
+        desc="Applying chat template"
+    )
+    dataset = dataset.rename_columns(
+        {
+            'text_prompt': "prompt",
+            'text_chosen': "chosen",
+            'text_rejected': "rejected"
+        }
+    )
+    print(dataset)
+    dataset.save_to_disk(args.save_dir + '/dpo_dataset')
+
 
 if __name__ == '__main__':
     argparser = ArgumentParser()
     argparser.add_argument("--datasets_dir", type=str, default="./datasets")
     argparser.add_argument("--save_dir", type=str, default="./datasets")
-    argparser.add_argument("--tokenizer_path", type=str, default="./examples/tokenizer")
+    argparser.add_argument("--tokenizer_path", type=str, default="JingzeShi/Doge-tokenizer")
     argparser.add_argument("--num_proc", type=int, default=8)
     args = argparser.parse_args()
 
