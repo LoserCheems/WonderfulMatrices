@@ -1,6 +1,7 @@
 # Instructions to train Doge-Instruct
 
-We build the Doge-Instruct by doing SFT on [SmolTalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk).
+我们通过首先在[SmolTalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk)上进行SFT, 然后在 [UltraFeedback Binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) 上进行DPO, 来构建 Doge-Instruct.
+We build the Doge-Instruct by first SFT on [SmolTalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) and then DPO on [UltraFeedback Binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized).
 
 ## Setup
 
@@ -17,7 +18,7 @@ python ./examples/finetune/scripts/download_datasets.py --save_dir ./datasets --
 Then preprocess the datasets using the following command:
 
 ```bash
-python ./examples/finetune/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path ./examples/tokenizer --num_proc 8
+python ./examples/finetune/scripts/preprocess_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_path JingzeShi/Doge-20M --num_proc 8
 ```
 
 ## Training
