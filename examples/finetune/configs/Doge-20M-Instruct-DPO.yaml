@@ -14,8 +14,8 @@ resume_from_checkpoint: null
 # Dataset arguments
 dataset_path: ./datasets/dpo_dataset
 dataset_splits:
-- train_prefs
-- test_prefs
+- train
+- test
 preprocessing_num_workers: 12
 max_length: 1024
 max_prompt_length: 512
