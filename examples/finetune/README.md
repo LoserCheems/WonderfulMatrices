@@ -1,6 +1,5 @@
 # Instructions to train Doge-Instruct
 
-我们通过首先在[SmolTalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk)上进行SFT, 然后在 [UltraFeedback Binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) 上进行DPO, 来构建 Doge-Instruct.
 We build the Doge-Instruct by first SFT on [SmolTalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) and then DPO on [UltraFeedback Binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized).
 
 ## Setup
@@ -23,12 +22,18 @@ python ./examples/finetune/scripts/preprocess_datasets.py --datasets_dir ./datas
 
 ## Training
 
-We train the Doge-20M-Instruct on 1 GPU using the following command:
-
-> Note: You can modify the configuration file to implement multi-GPU training, etc.
+We use the following command to SFT Doge-20M on 1 GPU:
 
 ```bash
 python ./examples/finetune/scripts/sft.py --pretrained_model_name_or_path JingzeShi/Doge-20M --config_path ./examples/finetune/configs/Doge-20M-Instruct.yaml --logging_dir ./logs --output_dir ./results --resume_from_checkpoint <path_to_checkpoint>
 ```
+
+Then we use the following command to DPO Doge-20M-SFT on 1 GPU:
+
+```bash
+python ./examples/finetune/scripts/dpo.py --config_path ./examples/finetune/configs/Doge-20M-Instruct-DPO.yaml
+```
+
+> Note: You can modify the configuration file to implement multi-GPU training, etc.
 
 and so on.
