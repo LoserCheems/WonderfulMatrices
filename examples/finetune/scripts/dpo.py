@@ -5,12 +5,12 @@ from argparse import ArgumentParser
 
 import yaml
 import datasets
-import torch
-import transformers.optimization
-from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
+import transformers
+from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
+from trl import SFTConfig, SFTTrainer, DPOConfig, DPOTrainer
 
-from wonderful_matrices.models.configuration_doge import DogeConfig
-from wonderful_matrices.models.modeling_doge import DogeModel, DogeForCausalLM
+from wonderful_matrices.models import DogeConfig
+from wonderful_matrices.models import DogeModel, DogeForCausalLM
 
 
 logger = logging.getLogger(__name__)
@@ -50,103 +50,93 @@ def main(args):
     # 加载数据集
     # Load dataset
     ################################
-    dataset = datasets.load_from_disk(hyperparameters['training_args']['dataset_path'])
-    total_train_samples = hyperparameters['training_args']['per_device_train_batch_size'] * hyperparameters['training_args']['gradient_accumulation_steps'] * hyperparameters['training_args']['max_train_steps']
-    if len(dataset['train']) > total_train_samples:
-        dataset['train'] = dataset['train'].select(range(total_train_samples))
+    dataset = datasets.load_from_disk(hyperparameters['finetuning_args']['dataset_path'])
+    if hyperparameters['finetuning_args']['num_train_steps'] != -1:
+        dataset['train'] = dataset['train'].select(range(hyperparameters['finetuning_args']['num_train_steps'] * hyperparameters['finetuning_args']['per_device_train_batch_size'] * hyperparameters['finetuning_args']['gradient_accumulation_steps']))
     logger.info(
         f"Training dataset: {len(dataset['train'])} samples, Evaluation dataset: {len(dataset['test'])} samples."
     )
-
+    
     ################################
     # 加载分词器
     # Load tokenizer
     ################################
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path)
 
     ################################
-    # 初始化模型
-    # Initialize model
+    # 加载预训练模型
+    # Load pretrained model
     ################################
-    logger.info(f"Initializing model from config: {hyperparameters['model_config']}") 
-    config = DogeConfig(
-        **hyperparameters['model_config']
-    )
-    model = DogeForCausalLM(config=config)
+    logger.info(f"Loading model from {args.pretrained_model_name_or_path}")
+    model = AutoModelForCausalLM.from_pretrained(args.pretrained_model_name_or_path, trust_remote_code=True)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
     logger.info(f"Model parameters: {num_params}")
 
     ################################
-    # 设置训练参数
-    # Setup training arguments
+    # 设置监督微调参数
+    # Setup supervised finetuning arguments
     ################################
-    training_args = TrainingArguments(
+    sft_config = SFTConfig(
         # 随机种子与路径
         # Random seed and paths
-        seed=hyperparameters['training_args']['seed'],
+        seed=hyperparameters['finetuning_args']['seed'],
         logging_dir=logging_dir,
-        logging_steps=hyperparameters['training_args']['logging_steps'],
+        logging_steps=hyperparameters['finetuning_args']['logging_steps'],
         output_dir=output_dir,
 
         # 训练轮次与每个设备的批次
         # Training epochs and per device batch size
         do_train=True,
-        max_steps=hyperparameters['training_args']['max_train_steps'],
-        per_device_train_batch_size=hyperparameters['training_args']['per_device_train_batch_size'],
+        num_train_epochs=hyperparameters['finetuning_args']['num_train_epochs'],
+        per_device_train_batch_size=hyperparameters['finetuning_args']['per_device_train_batch_size'],
 
         # 评估策略与评估步数
         # Evaluation strategy and evaluation steps
-        do_eval=hyperparameters['training_args']['do_eval'],
-        eval_strategy="steps" if hyperparameters['training_args']['do_eval'] else "no",
-        eval_steps=hyperparameters['training_args']['eval_steps'],
-        per_device_eval_batch_size=hyperparameters['training_args']['per_device_eval_batch_size'],
-
+        do_eval=hyperparameters['finetuning_args']['do_eval'],
+        eval_strategy="steps" if hyperparameters['finetuning_args']['do_eval'] else "no",
+        eval_steps=hyperparameters['finetuning_args']['eval_steps'],
+        per_device_eval_batch_size=hyperparameters['finetuning_args']['per_device_eval_batch_size'],
+        
         # 学习策略
         # Learning strategy
-        optim=hyperparameters['training_args']['optim'],
-        adam_beta1=hyperparameters['training_args']['adam_beta1'],
-        adam_beta2=hyperparameters['training_args']['adam_beta2'],
-        adam_epsilon=hyperparameters['training_args']['adam_epsilon'],
-        learning_rate=hyperparameters['training_args']['learning_rate'],
-        lr_scheduler_type=hyperparameters['training_args']['lr_scheduler_type'],
-        lr_scheduler_kwargs={
-            'num_decay_steps': hyperparameters['training_args']['max_train_steps'] * hyperparameters['training_args']['decay_ratio'],
-            'warmup_type': hyperparameters['training_args']['warmup_type'],
-            'decay_type': hyperparameters['training_args']['decay_type'],
-            'min_lr_ratio': hyperparameters['training_args']['min_lr_ratio'],
-        },
-        warmup_ratio=hyperparameters['training_args']['warmup_ratio'],
-        weight_decay=hyperparameters['training_args']['weight_decay'],
+        learning_rate=hyperparameters['finetuning_args']['learning_rate'],
+        warmup_ratio=hyperparameters['finetuning_args']['warmup_ratio'],
+        lr_scheduler_type="cosine_with_min_lr",
+        lr_scheduler_kwargs={'min_lr_rate': hyperparameters['finetuning_args']['min_lr_rate']},
+        weight_decay=hyperparameters['finetuning_args']['weight_decay'],
 
         # 保存策略
         # Save strategy
         save_safetensors=True,
         save_strategy="steps",
-        save_steps=hyperparameters['training_args']['save_steps'],
+        save_steps=hyperparameters['finetuning_args']['save_steps'],
 
         # 混合精度与梯度累积
         # Mixed precision and gradient accumulation
-        bf16=hyperparameters['training_args']['bf16'],
-        max_grad_norm=hyperparameters['training_args']['max_grad_norm'],
-        gradient_accumulation_steps=hyperparameters['training_args']['gradient_accumulation_steps'],
+        bf16=hyperparameters['finetuning_args']['bf16'],
+        gradient_accumulation_steps=hyperparameters['finetuning_args']['gradient_accumulation_steps'],
+        max_grad_norm=hyperparameters['finetuning_args']['max_grad_norm'],
+
+        # 数据集处理策略
+        # Dataset processing strategy
+        dataset_text_field="text",
+        dataset_num_proc=hyperparameters['finetuning_args']['dataset_num_proc'],
+        max_seq_length=hyperparameters['finetuning_args']['max_seq_length'],
+        packing=hyperparameters['finetuning_args']['packing'],
     )
 
     ################################
     # 初始化训练器
-    # Initialize trainer
+    # Initialize the trainer
     ################################
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer, mlm=False, mlm_probability=0.0
-    )
-    trainer = Trainer(
+    trainer = SFTTrainer(
         model=model,
-        args=training_args,
+        args=sft_config,
         train_dataset=dataset['train'],
-        eval_dataset=dataset['test'] if hyperparameters['training_args']['do_eval'] else None,
+        eval_dataset=dataset['test'] if hyperparameters['finetuning_args']['do_eval'] else None,
         processing_class=tokenizer,
-        data_collator=data_collator,
     )
 
     ################################
@@ -162,7 +152,7 @@ def main(args):
     trainer.save_metrics("train", metrics)
     trainer.save_state()
 
-    #################################
+    ################################
     # 保存模型并创建模型卡
     # Save model and create model card
     ################################
@@ -182,7 +172,7 @@ def main(args):
     # 评估
     # Evaluation
     ################################
-    if training_args.do_eval:
+    if sft_config.do_eval:
         logger.info("*** Start evaluation... ***")
         metrics = trainer.evaluate()
         metrics['eval_samples'] = len(dataset['test'])
@@ -200,20 +190,20 @@ def main(args):
     DogeConfig.register_for_auto_class()
     DogeModel.register_for_auto_class("AutoModel")
     DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
-    tokenizer = AutoTokenizer.from_pretrained(f'{output_dir}')
-    model = AutoModelForCausalLM.from_pretrained(f'{output_dir}')
-    tokenizer.save_pretrained(f'{output_dir}-registered')
-    model.save_pretrained(f'{output_dir}-registered')
+    tokenizer = AutoTokenizer.from_pretrained(f"{output_dir}")
+    model = AutoModelForCausalLM.from_pretrained(f"{output_dir}")
+    tokenizer.save_pretrained(f"{output_dir}-registered")
+    model.save_pretrained(f"{output_dir}-registered")
     logger.info(f"Model registered and saved to {output_dir}-registered")
 
 
-if __name__ == '__main__':
-    
+if __name__ == "__main__":
+
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--config_path', type=str, default='./examples/pretrain/configs/Doge-20M.yaml', help='path to yaml config file')
+    arg_parser.add_argument('--pretrained_model_name_or_path', type=str, default='JingzeShi/Doge-20M', help='pretrained model name or path')
+    arg_parser.add_argument('--config_path', type=str, default='./examples/finetune/configs/Doge-20M.yaml', help='path to yaml config file')
     arg_parser.add_argument('--logging_dir', type=str, default='./logs')
     arg_parser.add_argument('--output_dir', type=str, default='./results')
-    arg_parser.add_argument('--tokenizer_path', type=str, default='./examples/tokenizer', help='path to tokenizer')
     arg_parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="path to checkpoint to resume training")
 
     args = arg_parser.parse_args()
