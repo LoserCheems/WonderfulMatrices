@@ -1,0 +1,75 @@
+# Logging and Output arguments
+logging_dir: ./logs
+logging_steps: 100
+report_to:
+- tensorboard
+- wandb
+output_dir: ./results
+
+# Model arguments
+model_config:
+  vocab_size: 32768
+  hidden_size: 1024
+  intermediate_size: 2048
+  num_hidden_layers: 32
+  hidden_dropout: 0.0
+  hidden_act: "silu"
+  max_position_embeddings: 2048
+  rope_theta: 10000.0
+  use_cache: True
+  tie_word_embeddings: True
+  num_attention_heads: 8
+  num_key_value_heads: 4
+  is_moe: True
+  num_cdmmoe_experts: 2048
+  num_cdmmoe_heads: 4
+  num_cdmmoe_experts_per_head: 8
+  private_expert_retrieval_size: 256
+
+tokenizer_name_or_path: JingzeShi/Doge-tokenizer
+torch_dtype: bfloat16
+resume_from_checkpoint: null
+
+# Dataset arguments
+dataset_path: ./datasets/pretrain_dataset
+dataset_splits:
+- train
+- test
+mlm:
+  mlm: False
+  mlm_probability: 0.0
+
+# Trainer arguments
+seed: 233
+
+do_train: True
+max_train_steps: 32000
+per_device_train_batch_size: 1
+
+do_eval: True
+eval_strategy: steps
+eval_steps: 100
+per_device_eval_batch_size: 1
+
+optim: adamw_torch_fused
+adam_beta1: 0.9
+adam_beta2: 0.95
+adam_epsilon: 1.0e-8
+learning_rate: 2.0e-3
+lr_scheduler_type: warmup_stable_decay
+lr_scheduler_kwargs:
+  warmup_type: linear
+  decay_type: linear
+  decay_ratio: 0.1
+  min_lr_ratio: 0.0
+warmup_ratio: 0.1
+weight_decay: 0.01
+gradient_accumulation_steps: 1024
+max_grad_norm: 1.0
+bf16: True
+
+save_safetensors: True
+save_strategy: steps
+save_steps: 1000
+
+push_to_hub: True
