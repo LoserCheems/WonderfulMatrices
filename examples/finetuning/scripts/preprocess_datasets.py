@@ -14,7 +14,6 @@ def process_smoltalk(example, tokenizer):
 def process_ultrafeedback_binarized(example, tokenizer):
         
     prompt_messages = example["chosen"][:-1]
-    # Now we extract the final turn to define chosen/rejected responses
     chosen_messages = example["chosen"][-1:]
     rejected_messages = example["rejected"][-1:]
 
