@@ -1,0 +1,52 @@
+# Logging and Output arguments
+logging_dir: ./logs
+logging_steps: 100
+report_to:
+- tensorboard
+- wandb
+output_dir: ./results
+
+# Model arguments
+model_name_or_path: JingzeShi/Doge-60M-Instruct-SFT
+torch_dtype: bfloat16
+resume_from_checkpoint: null
+
+# Dataset arguments
+dataset_path: ./datasets/dpo_dataset
+dataset_splits:
+- train
+- test
+preprocessing_num_workers: 8
+max_length: 1024
+max_prompt_length: 512
+
+# DPOTrainer arguments
+seed: 233
+
+do_train: True
+num_train_epochs: 3
+per_device_train_batch_size: 1
+
+do_eval: True
+eval_strategy: steps
+eval_steps: 100
+per_device_eval_batch_size: 1
+
+optim: adamw_torch
+beta: 0.5
+loss_type: sigmoid
+learning_rate: 1.0e-6
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+warmup_ratio: 0.1
+weight_decay: 0.01
+gradient_accumulation_steps: 1
+max_grad_norm: 1.0
+bf16: True
+
+save_safetensors: True
+save_strategy: steps
+save_steps: 1000
+
+push_to_hub: True
