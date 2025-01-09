@@ -60,9 +60,9 @@ lr_scheduler_type: warmup_stable_decay
 lr_scheduler_kwargs:
   warmup_type: linear
   decay_type: linear
-  decay_ratio: 0.1
+  decay_steps: 2400
   min_lr_ratio: 0.0
-warmup_ratio: 0.1
+warmup_steps: 2400
 weight_decay: 0.01
 gradient_accumulation_steps: 768
 max_grad_norm: 1.0
