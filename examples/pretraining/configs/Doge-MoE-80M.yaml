@@ -73,3 +73,6 @@ save_strategy: steps
 save_steps: 1000
 
 push_to_hub: True
+repo_id: <your-repo-id>
+private: True
+token: <your-token>

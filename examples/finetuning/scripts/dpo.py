@@ -187,8 +187,16 @@ def main(config_path):
 
     if args["push_to_hub"] is True:
         logger.info("Pushing to hub...")
-        tokenizer.push_to_hub()
-        model.push_to_hub()
+        tokenizer.push_to_hub(
+            repo_id=args['repo_id'],
+            private=args['private'],
+            token=args['token'],
+        )
+        model.push_to_hub(
+            repo_id=args['repo_id'],
+            private=args['private'],
+            token=args['token'],
+        )
     
     logger.info("*** Training finished! ***")
 
