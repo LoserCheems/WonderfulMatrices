@@ -35,7 +35,7 @@ We train the Doge-20M on 1 GPU using the following command:
 > Note: You can modify the configuration file to implement multi-GPU training, etc.
 
 ```bash
-python ./examples/pretraining/scripts/pt.py --config_path ./examples/pretraining/configs/Doge-20M.yaml --logging_dir ./logs --output_dir ./results --tokenizer_path ./examples/tokenizer --resume_from_checkpoint <path_to_checkpoint>
+python ./examples/pretraining/scripts/pt.py --config_path ./examples/pretraining/configs/Doge-20M.yaml
 ```
 
 and so on.
