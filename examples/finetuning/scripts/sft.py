@@ -44,8 +44,6 @@ def main(config_path):
     # Load dataset
     ################################
     dataset = datasets.load_from_disk(args['dataset_path'])
-    dataset['train'] = dataset['train'].select(range(1000))
-    dataset['test'] = dataset['test'].select(range(10))
     
     ################################
     # Load tokenizer
