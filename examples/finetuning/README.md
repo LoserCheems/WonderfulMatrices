@@ -25,7 +25,7 @@ python ./examples/finetuning/scripts/preprocess_datasets.py --datasets_dir ./dat
 We use the following command to SFT Doge-20M on 1 GPU:
 
 ```bash
-python ./examples/finetuning/scripts/sft.py --pretrained_model_name_or_path JingzeShi/Doge-20M --config_path ./examples/finetuning/configs/Doge-20M-Instruct.yaml --logging_dir ./logs --output_dir ./results --resume_from_checkpoint <path_to_checkpoint>
+python ./examples/finetuning/scripts/sft.py --config_path ./examples/finetuning/configs/Doge-20M-Instruct.yaml
 ```
 
 Then we use the following command to DPO Doge-20M-SFT on 1 GPU:
