@@ -17,21 +17,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. -->
 
+<div align="center">
+    <img src="./assets/wonderful_matrices.png" alt="Wonderful Matrices" width="100%">
+</div>
 
-# Wonderful Matrices
+<div align="center">
 
-<h4 align="center">
-<p>
+[![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834)
+[![huggingface](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/collections/JingzeShi/doge-slm-677fd879f8c4fd0f43e05458)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+
+<h4>
 
 [English](./README.md) | 简体中文
 
-</p>
 </h4>
 
-![Wonderful_Matrices](./assets/wonderful_matrices.png)
-> **Wonderful Matrices: More Efficient and Effective Architecture for Language Modeling Tasks**\
-> 石竞泽*, 吴冰珩*\
-> 论文: [arXiv:2412.11834](https://arxiv.org/abs/2412.11834)
+</div>
 
 
 ## 关于
