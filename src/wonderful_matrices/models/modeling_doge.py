@@ -381,10 +381,10 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
-        def dynamic_mask_mod(score, b, h, q_idx, kv_idx):
+        def dynamic_mask_mod(score, batch, head, q_idx, kv_idx):
             if attention_mask is not None:
-                score = score + attention_mask[b][0][q_idx][kv_idx]
-            score = score * dynamic_mask[b][h][kv_idx]
+                score = score + attention_mask[batch][0][q_idx][kv_idx]
+            score = score * dynamic_mask[batch][head][kv_idx]
             return score
 
         attn_output = flex_attention(
