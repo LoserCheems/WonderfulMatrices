@@ -221,10 +221,10 @@ class DogeDynamicMaskAttention(nn.Module):
         # Q K V O projections
         self.q_proj = nn.Linear(self.hidden_dim, self.num_heads * self.head_dim, bias=config.hidden_bias)
         self.k_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
+        self.v_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         # dynamic mask for the QK^T attention score matrix
         self.A = nn.Parameter(torch.ones(self.num_heads))
-        self.dt_proj = nn.Linear(self.hidden_dim, self.num_heads, bias=config.hidden_bias)
-        self.v_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
+        self.dt_proj = nn.Linear(self.num_key_value_heads * self.head_dim, self.num_heads, bias=config.hidden_bias)
         self.o_proj = nn.Linear(self.hidden_dim, self.hidden_dim, bias=config.hidden_bias)
 
     def forward(
@@ -255,6 +255,10 @@ class DogeDynamicMaskAttention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
+        # calculate dynamic mask from value_states
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
+
         # repeat key and value states
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
@@ -264,11 +268,9 @@ class DogeDynamicMaskAttention(nn.Module):
 
         # add mask to attention scores
         if attention_mask is not None:
-            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-            dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
-            attn_weights = attn_weights * dynamic_mask
+        attn_weights = attn_weights * dynamic_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
