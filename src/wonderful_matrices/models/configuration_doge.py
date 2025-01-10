@@ -195,6 +195,10 @@ class DogeConfig(PretrainedConfig):
             self.rope_scaling["rope_type"] = self.rope_scaling["type"]
         rope_config_validation(self)
 
+        # for backward compatibility
+        if num_key_value_heads is None:
+            self.num_key_value_heads = num_attention_heads
+
         super().__init__(
             bos_token_id=bos_token_id,
             eos_token_id=eos_token_id,
