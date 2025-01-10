@@ -49,7 +49,7 @@ def main(config_path):
     ################################
     # Load tokenizer
     ################################
-    tokenizer = AutoTokenizer.from_pretrained(args["tokenizer_path"])
+    tokenizer = AutoTokenizer.from_pretrained(args["tokenizer_name_or_path"])
 
     ################################
     # Initialize model
