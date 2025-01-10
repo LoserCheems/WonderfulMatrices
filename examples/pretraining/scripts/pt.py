@@ -58,8 +58,9 @@ def main(config_path):
     logger.info(f"Initializing model from config: {args['model_config']}") 
     config = DogeConfig(
         **args['model_config'],
+        torch_dtype=args['torch_dtype'],
     )
-    model = DogeForCausalLM(config=config).to(getattr(torch, args['torch_dtype']))
+    model = DogeForCausalLM(config=config)
 
     model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
