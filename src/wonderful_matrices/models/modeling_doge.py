@@ -403,7 +403,7 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
 
 
 DOGE_ATTENTION_CLASSES = {
-    "flex": DogeFlexDynamicMaskAttention,
+    "flex_attention": DogeFlexDynamicMaskAttention,
     "eager": DogeDynamicMaskAttention,
     "sdpa": DogeSdpaDynamicMaskAttention,
 }
