@@ -270,7 +270,7 @@ class DogeDynamicMaskAttention(nn.Module):
         if attention_mask is not None:
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
-        attn_weights = attn_weights * dynamic_mask
+        attn_weights = attn_weights * dynamic_mask[:, :, None, :]
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
