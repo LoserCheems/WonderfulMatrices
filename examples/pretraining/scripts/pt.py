@@ -96,7 +96,7 @@ def main(config_path):
         learning_rate=args['learning_rate'],
         lr_scheduler_type=args['lr_scheduler_type'],
         lr_scheduler_kwargs={**args['lr_scheduler_kwargs']},
-        warmup_ratio=args['warmup_ratio'],
+        warmup_steps=args['warmup_steps'],
         weight_decay=args['weight_decay'],
         gradient_accumulation_steps=args['gradient_accumulation_steps'],
         max_grad_norm=args['max_grad_norm'],
