@@ -4,7 +4,8 @@ from argparse import ArgumentParser
 
 import yaml
 import datasets
-import transformers.optimization
+import torch
+import transformers
 from transformers import AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 
 from wonderful_matrices.models.configuration_doge import DogeConfig
@@ -58,7 +59,7 @@ def main(config_path):
     config = DogeConfig(
         **args['model_config'],
     )
-    model = DogeForCausalLM(config=config)
+    model = DogeForCausalLM(config=config).to(getattr(torch, args['torch_dtype']))
 
     model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
