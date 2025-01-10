@@ -22,6 +22,7 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import torch
+from torch.nn.attention.flex_attention import flex_attention
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
@@ -221,7 +222,7 @@ class DogeDynamicMaskAttention(nn.Module):
         self.q_proj = nn.Linear(self.hidden_dim, self.num_heads * self.head_dim, bias=config.hidden_bias)
         self.k_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         # dynamic mask for the QK^T attention score matrix
-        self.A = nn.Parameter(torch.ones(self.num_heads).normal_(mean=0.0, std=self.config.initializer_range))
+        self.A = nn.Parameter(torch.ones(self.num_heads))
         self.dt_proj = nn.Linear(self.hidden_dim, self.num_heads, bias=config.hidden_bias)
         self.v_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         self.o_proj = nn.Linear(self.hidden_dim, self.hidden_dim, bias=config.hidden_bias)
@@ -265,9 +266,9 @@ class DogeDynamicMaskAttention(nn.Module):
         if attention_mask is not None:
             dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
             dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
-            dynamic_mask = dynamic_mask < 1.0
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
+            attn_weights = attn_weights * dynamic_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -283,7 +284,7 @@ class DogeDynamicMaskAttention(nn.Module):
         return attn_output, past_key_value
 
 
-class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
+class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
 
     def forward(
         self,
@@ -319,10 +320,8 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
 
         causal_mask = attention_mask
         if attention_mask is not None:
-            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-            dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
-            dynamic_mask = dynamic_mask < 1.0
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
+            # SDPA does not support element-wise multiplication of attention scores, so dynamic_mask is not used here
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
@@ -349,9 +348,64 @@ class DogeSdpaDynamicMaskAttn(DogeDynamicMaskAttention):
         return attn_output, past_key_value
 
 
+class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_value: Optional[Cache] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        **kwargs,
+    ) -> Tuple[torch.Tensor, Optional[Cache]]:
+        bsz, q_len, _ = hidden_states.shape
+
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.v_proj(hidden_states)
+
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+
+        cos, sin = position_embeddings
+        query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
+
+        if past_key_value is not None:
+            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
+
+        def dynamic_mask_mod(score, b, h, q_idx, kv_idx):
+            if attention_mask is not None:
+                score = score + attention_mask[b][0][q_idx][kv_idx]
+            score = score * dynamic_mask[b][h][kv_idx]
+            return score
+
+        attn_output = flex_attention(
+            query_states,
+            key_states,
+            value_states,
+            score_mod=dynamic_mask_mod,
+            enable_gqa=True,
+        )
+
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.view(bsz, q_len, -1)
+        attn_output = self.o_proj(attn_output)
+        
+        return attn_output, past_key_value
+
+
 DOGE_ATTENTION_CLASSES = {
+    "flex": DogeFlexDynamicMaskAttention,
     "eager": DogeDynamicMaskAttention,
-    "sdpa": DogeSdpaDynamicMaskAttn,
+    "sdpa": DogeSdpaDynamicMaskAttention,
 }
 
 
@@ -519,6 +573,7 @@ class DogePreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["DogeDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
+    _supports_flex_attn = True
     _supports_sdpa = True
     _supports_cache_class = True
     _supports_quantized_cache = True
