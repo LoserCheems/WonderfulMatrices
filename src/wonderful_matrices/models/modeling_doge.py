@@ -267,10 +267,10 @@ class DogeDynamicMaskAttention(nn.Module):
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.head_dim)
 
         # add mask to attention scores
+        attn_mask = dynamic_mask[:, :, None, :]
         if attention_mask is not None:
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-            attn_weights = attn_weights + causal_mask
-        attn_weights = attn_weights + dynamic_mask[:, :, None, :]
+            attn_mask = attn_mask + attention_mask[:, :, :, : key_states.shape[-2]]
+        attn_weights = attn_weights + attn_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -320,7 +320,9 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
-        attn_mask = attention_mask[:, :, :, : key_states.shape[-2]] + dynamic_mask[:, :, None, :] if attention_mask is not None else dynamic_mask[:, :, None, :]
+        attn_mask = dynamic_mask[:, :, None, :]
+        if attention_mask is not None:
+            attn_mask = attn_mask + attention_mask[:, :, :, : key_states.shape[-2]]
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
@@ -377,7 +379,9 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
-        attn_mask = attention_mask + dynamic_mask[:, :, None, :] if attention_mask is not None else dynamic_mask[:, :, None, :]
+        attn_mask = dynamic_mask[:, :, None, :]
+        if attention_mask is not None:
+            attn_mask = attn_mask + attention_mask[:, :, :, : key_states.shape[-2]]
         # TODO: flex_attention: Captured buffers that require grad are not yet supported.
         # NOTE: So we only use flex_attention in inference mode.
         def dynamic_mask_mod(score, batch, head, q_idx, kv_idx):
