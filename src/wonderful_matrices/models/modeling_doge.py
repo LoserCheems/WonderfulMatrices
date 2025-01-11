@@ -223,7 +223,7 @@ class DogeDynamicMaskAttention(nn.Module):
         self.k_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         self.v_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         # dynamic mask for the QK^T attention score matrix
-        self.A = nn.Parameter(torch.zeros(self.num_heads))
+        self.A = nn.Parameter(torch.ones(self.num_heads))
         self.dt_proj = nn.Linear(self.num_key_value_heads * self.head_dim, self.num_heads, bias=config.hidden_bias)
         self.o_proj = nn.Linear(self.hidden_dim, self.hidden_dim, bias=config.hidden_bias)
 
