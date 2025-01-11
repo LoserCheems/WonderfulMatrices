@@ -270,7 +270,7 @@ class DogeDynamicMaskAttention(nn.Module):
         if attention_mask is not None:
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
-        attn_weights = attn_weights * dynamic_mask[:, :, None, :]
+        attn_weights = attn_weights + dynamic_mask[:, :, None, :]
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -315,6 +315,10 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        # calculate dynamic mask from value_states
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
         # repeat key and value states
         key_states = repeat_kv(key_states, self.num_key_value_groups)
@@ -322,8 +326,8 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
 
         causal_mask = attention_mask
         if attention_mask is not None:
-            # SDPA does not support element-wise multiplication of attention scores, so dynamic_mask is not used here
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+        causal_mask = causal_mask + dynamic_mask[:, :, None, :]
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
@@ -383,12 +387,10 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
+        attention_mask = attention_mask + dynamic_mask[:, :, None, :] if attention_mask is not None else dynamic_mask[:, :, None, :]
         # TODO: flex_attention: Captured buffers that require grad are not yet supported.
-        # NOTE: So we only use flex_attention in inference mode.
         def dynamic_mask_mod(score, batch, head, q_idx, kv_idx):
-            if attention_mask is not None:
-                score = score + attention_mask[batch][0][q_idx][kv_idx]
-            score = score * dynamic_mask[batch][head][kv_idx]
+            score = score + attention_mask[batch][head][q_idx][kv_idx]
             return score
 
         attn_output = flex_attention(

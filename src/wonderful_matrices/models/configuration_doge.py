@@ -154,7 +154,7 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads=8,
         num_key_value_heads=None,
         attention_dropout=0.0,
-        _attn_implementation="eager",
+        _attn_implementation="flex_attention",
         is_moe=False,
         num_cdmmoe_experts=2048,
         num_cdmmoe_heads=4,
