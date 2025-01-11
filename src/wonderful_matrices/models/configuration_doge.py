@@ -154,7 +154,6 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads=8,
         num_key_value_heads=None,
         attention_dropout=0.0,
-        _attn_implementation="flex_attention",
         is_moe=False,
         num_cdmmoe_experts=2048,
         num_cdmmoe_heads=4,
@@ -205,6 +204,5 @@ class DogeConfig(PretrainedConfig):
             eos_token_id=eos_token_id,
             pad_token_id=pad_token_id,
             tie_word_embeddings=tie_word_embeddings,
-            _attn_implementation=_attn_implementation,
             **kwargs,
         )

@@ -320,21 +320,11 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
-        # repeat key and value states
-        key_states = repeat_kv(key_states, self.num_key_value_groups)
-        value_states = repeat_kv(value_states, self.num_key_value_groups)
-
-        causal_mask = attention_mask
-        if attention_mask is not None:
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-        causal_mask = causal_mask + dynamic_mask[:, :, None, :]
+        attn_mask = attention_mask[:, :, :, : key_states.shape[-2]] + dynamic_mask[:, :, None, :] if attention_mask is not None else dynamic_mask[:, :, None, :]
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
         value_states = value_states.contiguous()
-
-        # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
-        is_causal = True if causal_mask is None and q_len > 1 else False
 
         # NOTE: As of pytorch 2.5.1, cuDNN's SDPA backward pass is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
         torch.backends.cuda.enable_cudnn_sdp(False)
@@ -342,9 +332,9 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
             query_states,
             key_states,
             value_states,
-            attn_mask=causal_mask,
+            attn_mask=attn_mask,
             dropout_p=self.attention_dropout if self.training else 0.0,
-            is_causal=is_causal,
+            enable_gqa=True,
         )
 
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -387,10 +377,11 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
-        attention_mask = attention_mask + dynamic_mask[:, :, None, :] if attention_mask is not None else dynamic_mask[:, :, None, :]
+        attn_mask = attention_mask + dynamic_mask[:, :, None, :] if attention_mask is not None else dynamic_mask[:, :, None, :]
         # TODO: flex_attention: Captured buffers that require grad are not yet supported.
+        # NOTE: So we only use flex_attention in inference mode.
         def dynamic_mask_mod(score, batch, head, q_idx, kv_idx):
-            score = score + attention_mask[batch][head][q_idx][kv_idx]
+            score = score + attn_mask[batch][head][q_idx][kv_idx]
             return score
 
         attn_output = flex_attention(
