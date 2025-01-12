@@ -258,7 +258,7 @@ class DogeDynamicMaskAttention(nn.Module):
 
         # calculate dynamic mask from value_states
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-        dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
         # repeat key and value states
         key_states = repeat_kv(key_states, self.num_key_value_groups)
@@ -351,7 +351,7 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
         
         # calculate dynamic mask from value_states
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-        dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
         attn_mask = self.prepare_dynamic_mask(
             hidden_states=hidden_states,
@@ -413,7 +413,7 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
         
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-        dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
         attn_mask = self.prepare_dynamic_mask(
             hidden_states=hidden_states,
