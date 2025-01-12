@@ -111,6 +111,8 @@ class DogeConfig(PretrainedConfig):
             If it is not specified, will default to `num_attention_heads`.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
+        dynamic_mask_ratio (`float`, *optional*, defaults to 0.0, range [0, 1]):
+            The ratio to control the proportion of the dynamic mask filled with the minimum value.
         is_moe (`bool`, *optional*, defaults to `False`):
             Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize
         num_cdmmoe_experts (`int`, *optional*, defaults to 2048):
@@ -154,7 +156,7 @@ class DogeConfig(PretrainedConfig):
         num_attention_heads=8,
         num_key_value_heads=None,
         attention_dropout=0.0,
-        _attn_implementation="eager",
+        dynamic_mask_ratio=0.0,
         is_moe=False,
         num_cdmmoe_experts=2048,
         num_cdmmoe_heads=4,
@@ -184,6 +186,7 @@ class DogeConfig(PretrainedConfig):
         self.num_attention_heads = num_attention_heads
         self.num_key_value_heads = num_key_value_heads
         self.attention_dropout = attention_dropout
+        self.dynamic_mask_ratio = dynamic_mask_ratio
         self.is_moe = is_moe
         self.num_cdmmoe_experts = num_cdmmoe_experts
         self.num_cdmmoe_heads = num_cdmmoe_heads
@@ -205,6 +208,5 @@ class DogeConfig(PretrainedConfig):
             eos_token_id=eos_token_id,
             pad_token_id=pad_token_id,
             tie_word_embeddings=tie_word_embeddings,
-            _attn_implementation=_attn_implementation,
             **kwargs,
         )

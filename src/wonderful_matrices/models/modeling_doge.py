@@ -217,6 +217,7 @@ class DogeDynamicMaskAttention(nn.Module):
         self.num_key_value_heads = config.num_key_value_heads
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.attention_dropout = config.attention_dropout
+        self.dynamic_mask_ratio = config.dynamic_mask_ratio
 
         # Q K V O projections
         self.q_proj = nn.Linear(self.hidden_dim, self.num_heads * self.head_dim, bias=config.hidden_bias)
@@ -238,7 +239,6 @@ class DogeDynamicMaskAttention(nn.Module):
         **kwargs,
     ) -> Tuple[torch.Tensor, Optional[Cache]]:
         bsz, q_len, _ = hidden_states.shape
-        min_type = torch.finfo(hidden_states.dtype).min
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
@@ -268,9 +268,12 @@ class DogeDynamicMaskAttention(nn.Module):
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.head_dim)
 
         # add mask to attention scores
-        attn_mask = dynamic_mask[:, :, None, :].masked_fill(dynamic_mask[:, :, None, :] < 1.0, min_type)
-        if attention_mask is not None:
-            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : key_states.shape[-2]] == min_type, min_type)
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            attention_mask=attention_mask,
+        )
         attn_weights = attn_weights + attn_mask
 
         # upcast attention scores to fp32
@@ -286,6 +289,35 @@ class DogeDynamicMaskAttention(nn.Module):
 
         return attn_output, past_key_value
 
+    def prepare_dynamic_mask(
+        self,
+        hidden_states: torch.Tensor,
+        dynamic_mask: torch.Tensor,
+        dynamic_mask_ratio: float = 0.0,
+        attention_mask: Optional[torch.Tensor] = None,
+    ):
+        """
+        Combine `dynamic_mask` with `attention_mask` to generate the final `attn_mask`.
+
+        Args:
+            hidden_states (`torch.Tensor`): The input hidden_states, used to determine the minimum value of the current input precision.
+            dynamic_mask (`torch.Tensor`): dynamic mask of shape `(batch_size, num_heads, key_sequence_length)`.
+            dynamic_mask_ratio (`float`, *optional*): Ratio from 0.0 to 1.0 used to control the proportion of the dynamic mask filled with the minimum value.
+            attention_mask (`torch.Tensor`, *optional*): attention mask of shape `(batch_size, 1, query_sequence_length, key_sequence_length)`.
+        """
+        min_type = torch.finfo(hidden_states.dtype).min
+        attn_mask = dynamic_mask[:, :, None, :]
+        if 0.0 < dynamic_mask_ratio < 1.0:
+            rate_value = torch.kthvalue(
+                attn_mask,
+                int(attn_mask.shape[-1] * dynamic_mask_ratio),
+                dim=-1, keepdim=True,
+            ).values
+            attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
+        if attention_mask is not None:
+            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : hidden_states.shape[-2]] == min_type, min_type)
+        return attn_mask
+
 
 class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
 
@@ -300,7 +332,6 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
         **kwargs,
     ) -> Tuple[torch.Tensor, Optional[Cache]]:
         bsz, q_len, _ = hidden_states.shape
-        min_type = torch.finfo(hidden_states.dtype).min
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
@@ -322,9 +353,12 @@ class DogeSdpaDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
 
-        attn_mask = dynamic_mask[:, :, None, :].masked_fill(dynamic_mask[:, :, None, :] < 1.0, min_type)
-        if attention_mask is not None:
-            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : key_states.shape[-2]] == min_type, min_type)
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            attention_mask=attention_mask,
+        )
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
@@ -361,7 +395,6 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
         **kwargs,
     ) -> Tuple[torch.Tensor, Optional[Cache]]:
         bsz, q_len, _ = hidden_states.shape
-        min_type = torch.finfo(hidden_states.dtype).min
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
@@ -382,9 +415,12 @@ class DogeFlexDynamicMaskAttention(DogeDynamicMaskAttention):
         dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
         dynamic_mask = torch.exp(self.A * dt_states).transpose(-1, -2)
 
-        attn_mask = dynamic_mask[:, :, None, :].masked_fill(dynamic_mask[:, :, None, :] < 1.0, min_type)
-        if attention_mask is not None:
-            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : key_states.shape[-2]] == min_type, min_type)
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            attention_mask=attention_mask,
+        )
         # TODO: flex_attention: Captured buffers that require grad are not yet supported.
         # NOTE: So we only use flex_attention in inference mode.
         def dynamic_mask_mod(score, batch, head, q_idx, kv_idx):
