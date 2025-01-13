@@ -271,13 +271,14 @@ class DogeDynamicMaskAttention(nn.Module):
         attn_mask = self.prepare_dynamic_mask(
             hidden_states=hidden_states,
             dynamic_mask=dynamic_mask,
-            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            dynamic_mask_ratio=0.1,
             attention_mask=attention_mask,
         )
         attn_weights = attn_weights + attn_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        print(attn_weights)
         attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
 
         # apply attention scores to value states
@@ -308,12 +309,10 @@ class DogeDynamicMaskAttention(nn.Module):
         min_type = torch.finfo(hidden_states.dtype).min
         attn_mask = dynamic_mask[:, :, None, :]
         if 0.0 < dynamic_mask_ratio < 1.0:
-            rate_value = torch.kthvalue(
-                attn_mask,
-                int(attn_mask.shape[-1] * dynamic_mask_ratio),
-                dim=-1, keepdim=True,
-            ).values
-            attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
+            num_dynamic_mask = int(attn_mask.shape[-1] * dynamic_mask_ratio)
+            if num_dynamic_mask > 0:
+                rate_value = torch.kthvalue(attn_mask, num_dynamic_mask, dim=-1, keepdim=True).values
+                attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
         if attention_mask is not None:
             attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : hidden_states.shape[-2]] == min_type, min_type)
         return attn_mask
