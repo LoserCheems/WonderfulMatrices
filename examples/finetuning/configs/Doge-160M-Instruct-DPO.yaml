@@ -24,7 +24,7 @@ max_prompt_length: 512
 seed: 233
 
 do_train: True
-num_train_epochs: 3
+num_train_epochs: 2
 per_device_train_batch_size: 1
 
 do_eval: True
@@ -35,7 +35,7 @@ per_device_eval_batch_size: 1
 optim: adamw_torch
 beta: 0.5
 loss_type: sigmoid
-learning_rate: 1.0e-6
+learning_rate: 4.0e-5
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1
