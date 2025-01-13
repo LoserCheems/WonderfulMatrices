@@ -278,7 +278,6 @@ class DogeDynamicMaskAttention(nn.Module):
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        print(attn_weights)
         attn_weights = F.dropout(attn_weights, p=self.attention_dropout, training=self.training)
 
         # apply attention scores to value states
