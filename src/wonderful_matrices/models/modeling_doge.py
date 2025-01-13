@@ -22,7 +22,6 @@ import math
 from typing import List, Optional, Tuple, Union
 
 import torch
-from torch.nn.attention.flex_attention import flex_attention
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
@@ -40,6 +39,7 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
+    is_torch_greater_or_equal,
     logging,
     replace_return_docstrings,
 )
@@ -49,6 +49,9 @@ try:
     from einx import add as einx_add
 except ImportError:
     einx_add = None
+
+if is_torch_greater_or_equal("2.5"):
+    from torch.nn.attention.flex_attention import flex_attention
 
 
 logger = logging.get_logger(__name__)
