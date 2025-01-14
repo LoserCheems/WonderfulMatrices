@@ -1,6 +1,6 @@
 # Instructions for pre-training Doge
 
-We build the Doge by doing PerTrain on [Smollm-Corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus).
+We build the Doge by doing Per-Training on [Smollm-Corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus).
 
 ## Setup
 
