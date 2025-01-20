@@ -132,12 +132,12 @@ print(tokenizer.batch_decode(outputs))
 
 ### Dynamic Mask Attention Module
 
-![DMA](./assets/dma.png)
-![DMA](./assets/mqar.png)
+![DMAttn](./assets/dmattn.png)
+![DMAttn](./assets/mqar.png)
 
 The sequence transformation module of the Doge model.
 
-Source code: [dma.py](./src/wonderful_matrices/modules/dma.py)
+Source code: [dmattn.py](./src/wonderful_matrices/modules/dmattn.py)
 
 Usage:
 

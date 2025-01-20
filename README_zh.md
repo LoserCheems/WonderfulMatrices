@@ -131,12 +131,12 @@ print(tokenizer.batch_decode(outputs))
 
 ### 动态掩码注意力 模块
 
-![DMA](./assets/dma.png)
-![DMA](./assets/mqar.png)
+![DMAttn](./assets/dmattn.png)
+![DMAttn](./assets/mqar.png)
 
 Doge 模型的序列变换模块.
 
-源代码: [dma.py](./src/wonderful_matrices/modules/dma.py)
+源代码: [dmattn.py](./src/wonderful_matrices/modules/dmattn.py)
 
 使用方法:
 
