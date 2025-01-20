@@ -21,10 +21,10 @@ model_config:
   num_attention_heads: 2
   num_key_value_heads: 1
   is_moe: True
-  num_cdmmoe_experts: 512
-  num_cdmmoe_heads: 1
-  num_cdmmoe_experts_per_head: 2
-  private_expert_retrieval_size: 256
+  num_cdmoe_experts: 1024
+  num_cdmoe_heads: 1
+  num_cdmoe_experts_per_head: 2
+  expert_retrieval_size: 64
 
 tokenizer_name_or_path: JingzeShi/Doge-tokenizer
 torch_dtype: bfloat16
