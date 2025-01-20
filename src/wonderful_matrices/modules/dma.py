@@ -25,7 +25,7 @@ from torch.nn import functional as F
 from transformers import Cache, StaticCache
 
 
-class DMAttn(nn.Module):
+class DMA(nn.Module):
     """Dynamic Masked Attention from 'Wonderful Matrices' paper."""
 
     def __init__(
@@ -57,7 +57,7 @@ class DMAttn(nn.Module):
             torch.ones(self.num_attention_heads)
         )
         self.dt_proj = nn.Linear(
-            self.hidden_dim,
+            self.num_attention_heads * self.attention_head_dim,
             self.num_attention_heads,
         )
         self.v_proj = nn.Linear(
@@ -140,6 +140,33 @@ class DMAttn(nn.Module):
                 )
 
         return causal_mask
+    
+    def prepare_dynamic_mask(
+        self,
+        hidden_states: torch.Tensor,
+        dynamic_mask: torch.Tensor,
+        dynamic_mask_ratio: float = 0.0,
+        attention_mask: Optional[torch.Tensor] = None,
+    ):
+        """
+        Combine `dynamic_mask` with `attention_mask` to generate the final `attn_mask`.
+
+        Args:
+            hidden_states (`torch.Tensor`): The input hidden_states, used to determine the minimum value of the current input precision.
+            dynamic_mask (`torch.Tensor`): dynamic mask of shape `(batch_size, num_heads, key_sequence_length)`.
+            dynamic_mask_ratio (`float`, *optional*): Ratio from 0.0 to 1.0 used to control the proportion of the dynamic mask filled with the minimum value.
+            attention_mask (`torch.Tensor`, *optional*): attention mask of shape `(batch_size, 1, query_sequence_length, key_sequence_length)`.
+        """
+        min_type = torch.finfo(hidden_states.dtype).min
+        attn_mask = dynamic_mask[:, :, None, :]
+        if 0.0 < dynamic_mask_ratio < 1.0:
+            num_dynamic_mask = int(attn_mask.shape[-1] * dynamic_mask_ratio)
+            if num_dynamic_mask > 0:
+                rate_value = torch.kthvalue(attn_mask, num_dynamic_mask, dim=-1, keepdim=True).values
+                attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
+        if attention_mask is not None:
+            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : hidden_states.shape[-2]] == min_type, min_type)
+        return attn_mask
 
     def forward(
         self,
@@ -173,17 +200,21 @@ class DMAttn(nn.Module):
 
         if past_key_value is not None:
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx)
+        
+        # calculate dynamic mask from value_states
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
         # compute attention scores matrix
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
         # add mask to attention scores
-        if attention_mask is not None:
-            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-            dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
-            dynamic_mask = dynamic_mask < 1.0
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
-            attn_weights = attn_weights + causal_mask
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            attention_mask=attention_mask,
+        )
+        attn_weights = attn_weights + attn_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)

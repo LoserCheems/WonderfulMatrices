@@ -52,8 +52,8 @@ else:
     _import_structure["ssd"] = [
         "SSD",
     ]
-    _import_structure["dmattn"] = [
-        "DMAttn",
+    _import_structure["dma"] = [
+        "DMA",
     ]
     _import_structure["cdmoe"] = [
         "CDMoE",
@@ -93,7 +93,7 @@ if TYPE_CHECKING:
             DogePreTrainedModel,
         )
         from .modules.ssd import SSD
-        from .modules.dmattn import DMAttn
+        from .modules.dma import DMA
         from .modules.cdmoe import CDMoE
         from .modules.peer import PEER
         from .modules.seimoe import SEIMoE
