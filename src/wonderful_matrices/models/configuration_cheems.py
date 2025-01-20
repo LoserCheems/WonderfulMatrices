@@ -124,7 +124,7 @@ class CheemsConfig(PretrainedConfig):
             Dimension of the Expert retrieval states for the Cross Domain Mixture of Experts.
     """
 
-    model_type = "doge"
+    model_type = "cheems"
     keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
