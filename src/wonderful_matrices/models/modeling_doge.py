@@ -274,7 +274,7 @@ class DogeDynamicMaskAttention(nn.Module):
         attn_mask = self.prepare_dynamic_mask(
             hidden_states=hidden_states,
             dynamic_mask=dynamic_mask,
-            dynamic_mask_ratio=0.1,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
             attention_mask=attention_mask,
         )
         attn_weights = attn_weights + attn_mask
