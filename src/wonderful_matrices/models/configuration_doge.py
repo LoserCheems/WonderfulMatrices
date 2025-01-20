@@ -115,13 +115,13 @@ class DogeConfig(PretrainedConfig):
             The ratio to control the proportion of the dynamic mask filled with the minimum value.
         is_moe (`bool`, *optional*, defaults to `False`):
             Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize
-        num_cdmmoe_experts (`int`, *optional*, defaults to 2048):
-            Number of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_heads (`int`, *optional*, defaults to 4):
+        num_cdmoe_experts (`int`, *optional*, defaults to 16348):
+            Number of Private Experts for the Cross Domain Mixture of Experts. calculation formula: :math:`\text{num_cdmoe_experts} = (32 \times \text{num_cdmoe_heads})^2`
+        num_cdmoe_heads (`int`, *optional*, defaults to 4):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
+        num_cdmoe_experts_per_head (`int`, *optional*, defaults to 8):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
-        expert_retrieval_size (`int`, *optional*, defaults to 256):
+        expert_retrieval_size (`int`, *optional*, defaults to 64):
             Dimension of the Expert retrieval states for the Cross Domain Mixture of Experts.
     """
 
@@ -158,9 +158,9 @@ class DogeConfig(PretrainedConfig):
         attention_dropout=0.0,
         dynamic_mask_ratio=0.0,
         is_moe=False,
-        num_cdmmoe_experts=2048,
-        num_cdmmoe_heads=4,
-        num_cdmmoe_experts_per_head=8,
+        num_cdmoe_experts=2048,
+        num_cdmoe_heads=4,
+        num_cdmoe_experts_per_head=8,
         expert_retrieval_size=256,
         **kwargs,
     ):
@@ -188,9 +188,9 @@ class DogeConfig(PretrainedConfig):
         self.attention_dropout = attention_dropout
         self.dynamic_mask_ratio = dynamic_mask_ratio
         self.is_moe = is_moe
-        self.num_cdmmoe_experts = num_cdmmoe_experts
-        self.num_cdmmoe_heads = num_cdmmoe_heads
-        self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head
+        self.num_cdmoe_experts = num_cdmoe_experts
+        self.num_cdmoe_heads = num_cdmoe_heads
+        self.num_cdmoe_experts_per_head = num_cdmoe_experts_per_head
         self.expert_retrieval_size = expert_retrieval_size
 
         # Validate the correctness of rotary position embeddings parameters
