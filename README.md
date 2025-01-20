@@ -132,23 +132,23 @@ print(tokenizer.batch_decode(outputs))
 
 ### Dynamic Mask Attention Module
 
-![DMAttn](./assets/dmattn.png)
-![DMAttn](./assets/mqar.png)
+![DMA](./assets/dma.png)
+![DMA](./assets/mqar.png)
 
 The sequence transformation module of the Doge model.
 
-Source code: [dmattn.py](./src/wonderful_matrices/modules/dmattn.py)
+Source code: [dma.py](./src/wonderful_matrices/modules/dma.py)
 
 Usage:
 
 ```python
 import torch
-from wonderful_matrices.modules.dmcattn import DMAttn
+from wonderful_matrices.modules.dma import DMA
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
 attention_mask = torch.ones(batch, seq_len)
-attn = DMAttn(
+attn = DMA(
     d_model=dim,
     n_heads=1,
     max_position_embeddings=seq_len,
