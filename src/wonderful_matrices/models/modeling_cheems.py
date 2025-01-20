@@ -55,6 +55,9 @@ except ImportError:
 logger = logging.get_logger(__name__)
 
 
+if is_torch_greater_or_equal("2.5"):
+    from torch.nn.attention.flex_attention import flex_attention
+
 if is_mamba_2_ssm_available():
     from mamba_ssm.ops.triton.selective_state_update import selective_state_update
     from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined
@@ -99,14 +102,14 @@ class Residual(nn.Module):
     
 
 class RotaryEmbedding(nn.Module):
-    def __init__(self, config: Optional[CheemsConfig] = None):
+    def __init__(self, config: Optional[DogeConfig] = None):
         super().__init__()
         self.rope_kwargs = {}
 
-        if config.rope_scaling is None:
-            self.rope_type = "default"
+        if config.rope_scaling is not None:
+            self.rope_type = config.rope_scaling.get("rope_type", config.rope_scaling.get("type"))
         else:
-            self.rope_type = config.rope_scaling
+            self.rope_type = "default"
         self.max_seq_len_cached = config.max_position_embeddings
         self.original_max_seq_len = config.max_position_embeddings
         self.base = config.rope_theta
@@ -144,6 +147,7 @@ class RotaryEmbedding(nn.Module):
         # core RoPE block
         inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
         position_ids_expanded = position_ids[:, None, :].float()
+        # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         with torch.autocast(device_type=device_type, enabled=False):
@@ -152,6 +156,7 @@ class RotaryEmbedding(nn.Module):
             cos = emb.cos()
             sin = emb.sin()
 
+        # Advanced RoPE types (e.g. yarn) apply a post-processing scaling factor, equivalent to scaling attention
         cos = cos * self.attention_scaling
         sin = sin * self.attention_scaling
 
@@ -199,6 +204,18 @@ def apply_QK_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
+
+
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+    """
+    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). 
+    The hidden states go from (batch, num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+    """
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
 class HybridSSDAttnDynamicCache(DynamicCache):
@@ -291,7 +308,7 @@ class HybridSSDAttnDynamicCache(DynamicCache):
         raise NotImplementedError("HybridSSDAttnDynamicCache does not have a legacy cache equivalent.")
 
 
-class CheemsSSD(nn.Module):
+class CheemsStateSpaceDuality(nn.Module):
     """State Space Duality from 'Transformers are SSMs' paper."""
 
     def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
@@ -429,7 +446,7 @@ class CheemsSSD(nn.Module):
 
 class CheemsDynamicMaskAttention(nn.Module):
     """Dynamic Mask Attention from 'Wonderful Matrices' paper."""
-    
+
     def __init__(self, config: CheemsConfig, layer_idx: Optional[int] = None):
         super().__init__()
 
@@ -437,46 +454,26 @@ class CheemsDynamicMaskAttention(nn.Module):
         self.layer_idx = layer_idx
         if layer_idx is None:
             logger.warning_once(
-                f"Instantiating {self.__class__.__name__} without passing a `layer_idx` is not recommended and will "
-                "lead to errors during the forward call if caching is used. Please make sure to provide a `layer_idx` "
-                "when creating this class."
+                f"Instantiating {self.__class__.__name__} without passing a `layer_idx` is not recommended and will lead to errors during the forward call if caching is used. "
+                "Please make sure to provide a `layer_idx` when creating this class."
             )
 
         self.hidden_dim = config.hidden_size
-        self.num_attention_heads = config.num_attention_heads
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_dim // self.num_heads
+        self.num_key_value_heads = config.num_key_value_heads
+        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.attention_dropout = config.attention_dropout
-        self.attention_head_dim = self.hidden_dim // self.num_attention_heads
+        self.dynamic_mask_ratio = config.dynamic_mask_ratio
 
         # Q K V O projections
-        self.q_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads * self.attention_head_dim,
-            bias=config.hidden_bias,
-        )
-        self.k_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads * self.attention_head_dim,
-            bias=config.hidden_bias,
-        )
+        self.q_proj = nn.Linear(self.hidden_dim, self.num_heads * self.head_dim, bias=config.hidden_bias)
+        self.k_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
+        self.v_proj = nn.Linear(self.hidden_dim, self.num_key_value_heads * self.head_dim, bias=config.hidden_bias)
         # dynamic mask for the QK^T attention score matrix
-        self.A = nn.Parameter(
-            torch.ones(self.num_attention_heads)
-        )
-        self.dt_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads,
-            bias=config.hidden_bias,
-        )
-        self.v_proj = nn.Linear(
-            self.hidden_dim,
-            self.num_attention_heads * self.attention_head_dim,
-            bias=config.hidden_bias,
-        )
-        self.o_proj = nn.Linear(
-            self.hidden_dim,
-            self.hidden_dim,
-            bias=config.hidden_bias,
-        )
+        self.A = nn.Parameter(torch.ones(self.num_heads))
+        self.dt_proj = nn.Linear(self.num_key_value_heads * self.head_dim, self.num_heads, bias=config.hidden_bias)
+        self.o_proj = nn.Linear(self.hidden_dim, self.hidden_dim, bias=config.hidden_bias)
 
     def forward(
         self,
@@ -494,15 +491,9 @@ class CheemsDynamicMaskAttention(nn.Module):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
-            1, 2
-        )
-        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
-            1, 2
-        )
-        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(
-            1, 2
-        )
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
 
         cos, sin = position_embeddings
         query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -512,16 +503,25 @@ class CheemsDynamicMaskAttention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
+        # calculate dynamic mask from value_states
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
+
+        # repeat key and value states
+        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
+
         # compute attention scores matrix
-        attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
+        attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.head_dim)
 
         # add mask to attention scores
-        if attention_mask is not None:
-            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-            dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
-            dynamic_mask = dynamic_mask < 1.0
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
-            attn_weights = attn_weights + causal_mask
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            attention_mask=attention_mask,
+        )
+        attn_weights = attn_weights + attn_mask
 
         # upcast attention scores to fp32
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -536,8 +536,35 @@ class CheemsDynamicMaskAttention(nn.Module):
 
         return attn_output, past_key_value
 
+    def prepare_dynamic_mask(
+        self,
+        hidden_states: torch.Tensor,
+        dynamic_mask: torch.Tensor,
+        dynamic_mask_ratio: float = 0.0,
+        attention_mask: Optional[torch.Tensor] = None,
+    ):
+        """
+        Combine `dynamic_mask` with `attention_mask` to generate the final `attn_mask`.
 
-class CheemsSdpaDynamicMaskAttn(CheemsDynamicMaskAttention):
+        Args:
+            hidden_states (`torch.Tensor`): The input hidden_states, used to determine the minimum value of the current input precision.
+            dynamic_mask (`torch.Tensor`): dynamic mask of shape `(batch_size, num_heads, key_sequence_length)`.
+            dynamic_mask_ratio (`float`, *optional*): Ratio from 0.0 to 1.0 used to control the proportion of the dynamic mask filled with the minimum value.
+            attention_mask (`torch.Tensor`, *optional*): attention mask of shape `(batch_size, 1, query_sequence_length, key_sequence_length)`.
+        """
+        min_type = torch.finfo(hidden_states.dtype).min
+        attn_mask = dynamic_mask[:, :, None, :]
+        if 0.0 < dynamic_mask_ratio < 1.0:
+            num_dynamic_mask = int(attn_mask.shape[-1] * dynamic_mask_ratio)
+            if num_dynamic_mask > 0:
+                rate_value = torch.kthvalue(attn_mask, num_dynamic_mask, dim=-1, keepdim=True).values
+                attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
+        if attention_mask is not None:
+            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : hidden_states.shape[-2]] == min_type, min_type)
+        return attn_mask
+
+
+class CheemsSdpaDynamicMaskAttention(CheemsDynamicMaskAttention):
 
     def forward(
         self,
@@ -555,9 +582,9 @@ class CheemsSdpaDynamicMaskAttn(CheemsDynamicMaskAttention):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_attention_heads, self.attention_head_dim).transpose(1, 2)
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
 
         cos, sin = position_embeddings
         query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
@@ -566,23 +593,31 @@ class CheemsSdpaDynamicMaskAttn(CheemsDynamicMaskAttention):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        # calculate dynamic mask from value_states
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
 
-        if attention_mask is not None:
-            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
-            dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
-            dynamic_mask = dynamic_mask < 1.0
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]].masked_fill(dynamic_mask[:, :, None, :], torch.finfo(hidden_states.dtype).min)
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            attention_mask=attention_mask,
+        )
 
         query_states = query_states.contiguous()
         key_states = key_states.contiguous()
         value_states = value_states.contiguous()
 
+        # NOTE: As of pytorch 2.5.1, cuDNN's SDPA backward pass is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
+        torch.backends.cuda.enable_cudnn_sdp(False)
         attn_output = F.scaled_dot_product_attention(
             query_states,
             key_states,
             value_states,
-            attn_mask=causal_mask,
-            dropout_p=self.attention_dropout,
+            attn_mask=attn_mask,
+            dropout_p=self.attention_dropout if self.training else 0.0,
+            enable_gqa=True,
         )
 
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -592,9 +627,70 @@ class CheemsSdpaDynamicMaskAttn(CheemsDynamicMaskAttention):
         return attn_output, past_key_value
 
 
+class CheemsFlexDynamicMaskAttention(CheemsDynamicMaskAttention):
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_value: Optional[Cache] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        **kwargs,
+    ) -> Tuple[torch.Tensor, Optional[Cache]]:
+        bsz, q_len, _ = hidden_states.shape
+
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.v_proj(hidden_states)
+
+        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+
+        cos, sin = position_embeddings
+        query_states, key_states = apply_QK_rotary_pos_emb(query_states, key_states, cos, sin)
+
+        if past_key_value is not None:
+            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(bsz, value_states.shape[-2], -1))
+        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
+
+        attn_mask = self.prepare_dynamic_mask(
+            hidden_states=hidden_states,
+            dynamic_mask=dynamic_mask,
+            dynamic_mask_ratio=self.dynamic_mask_ratio,
+            attention_mask=attention_mask,
+        )
+        # TODO: flex_attention: Captured buffers that require grad are not yet supported.
+        # NOTE: So we only use flex_attention in inference mode.
+        def dynamic_mask_mod(score, batch, head, q_idx, kv_idx):
+            score = score + attn_mask[batch][head][q_idx][kv_idx]
+            return score
+
+        attn_output = flex_attention(
+            query_states,
+            key_states,
+            value_states,
+            score_mod=dynamic_mask_mod,
+            enable_gqa=True,
+        )
+
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.view(bsz, q_len, -1)
+        attn_output = self.o_proj(attn_output)
+        
+        return attn_output, past_key_value
+
+
 CHEEMS_ATTENTION_CLASSES = {
+    "flex_attention": CheemsFlexDynamicMaskAttention,
     "eager": CheemsDynamicMaskAttention,
-    "sdpa": CheemsSdpaDynamicMaskAttn,
+    "sdpa": CheemsSdpaDynamicMaskAttention,
 }
 
 
@@ -606,21 +702,9 @@ class CheemsMLP(nn.Module):
         self.intermediate_dim = config.intermediate_size
         self.act_fn = ACT2FN[config.hidden_act]
 
-        self.gate_proj = nn.Linear(
-            self.hidden_dim,
-            self.intermediate_dim,
-            bias=config.hidden_bias,
-        )
-        self.up_proj = nn.Linear(
-            self.hidden_dim,
-            self.intermediate_dim,
-            bias=config.hidden_bias,
-        )
-        self.down_proj = nn.Linear(
-            self.intermediate_dim,
-            self.hidden_dim,
-            bias=config.hidden_bias,
-        )
+        self.gate_proj = nn.Linear(self.hidden_dim, self.intermediate_dim, bias=config.hidden_bias)
+        self.up_proj = nn.Linear(self.hidden_dim, self.intermediate_dim, bias=config.hidden_bias)
+        self.down_proj = nn.Linear(self.intermediate_dim, self.hidden_dim, bias=config.hidden_bias)
 
     def forward(
         self,
@@ -640,36 +724,18 @@ class CheemsCDMoE(CheemsMLP):
         self.act_fn = ACT2FN[config.hidden_act]
 
         self.expert_retrieval_dim = config.expert_retrieval_size
-        self.num_cdmmoe_experts = config.num_cdmmoe_experts
-        self.num_cdmmoe_heads = config.num_cdmmoe_heads
-        self.num_cdmmoe_experts_per_head = config.num_cdmmoe_experts_per_head
-        self.num_keys = int(math.sqrt(self.num_cdmmoe_experts))
+        self.num_cdmoe_experts = config.num_cdmoe_experts
+        self.num_cdmoe_heads = config.num_cdmoe_heads
+        self.num_cdmoe_experts_per_head = config.num_cdmoe_experts_per_head
+        self.num_keys = int(math.sqrt(self.num_cdmoe_experts))
 
         # queries and keys for retrieval experts
-        self.queries = nn.Linear(
-            self.hidden_dim,
-            self.num_cdmmoe_heads * self.expert_retrieval_dim,
-            bias=False,
-        )
-        self.keys = nn.Parameter(
-            torch.zeros(
-                self.num_cdmmoe_heads,
-                self.num_keys,
-                2,
-                self.expert_retrieval_dim // 2,
-            )
-        )
+        self.queries = nn.Linear(self.hidden_dim, self.num_cdmoe_heads * self.expert_retrieval_dim, bias=False)
+        self.keys = nn.Parameter(torch.zeros(self.num_cdmoe_heads, self.num_keys, 2, self.expert_retrieval_dim // 2))
 
         # experts
-        self.down_embed  = nn.Embedding(
-            self.num_cdmmoe_experts,
-            self.hidden_dim,
-        )
-        self.up_embed = nn.Embedding(
-            self.num_cdmmoe_experts,
-            self.hidden_dim,
-        )
-        
+        self.down_embed  = nn.Embedding(self.num_cdmoe_experts, self.hidden_dim)
+        self.up_embed = nn.Embedding(self.num_cdmoe_experts, self.hidden_dim)
 
     def forward(
         self,
@@ -680,11 +746,11 @@ class CheemsCDMoE(CheemsMLP):
 
         # get similarity with queries and keys
         queries = self.queries(hidden_states)
-        queries = queries.view(bsz, seq_len, 2, self.num_cdmmoe_heads, -1).permute(2, 0, 1, 3, 4)
+        queries = queries.view(bsz, seq_len, 2, self.num_cdmoe_heads, -1).permute(2, 0, 1, 3, 4)
         sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
 
         # get experts with the highest similarity
-        (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmmoe_experts_per_head, dim=-1)
+        (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmoe_experts_per_head, dim=-1)
         if einx_add is not None:
             all_scores = einx_add("... i, ... j -> ... (i j)", scores_x, scores_y)
             all_indices = einx_add("... i, ... j -> ... (i j)", indices_x * self.num_keys, indices_y)
@@ -693,7 +759,7 @@ class CheemsCDMoE(CheemsMLP):
             all_scores = all_scores.view(*scores_x.shape[:-1], -1)
             all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
             all_indices = all_indices.view(*indices_x.shape[:-1], -1)
-        scores, pk_indices = all_scores.topk(self.num_cdmmoe_experts_per_head, dim=-1)
+        scores, pk_indices = all_scores.topk(self.num_cdmoe_experts_per_head, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
         down_embed = self.down_embed(indices)
         up_embed = self.up_embed(indices)
@@ -713,7 +779,7 @@ class CheemsSSDDecoderLayer(nn.Module):
         self.hidden_dropout = config.hidden_dropout
 
         self.pre_sequence_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.ssd = CheemsSSD(config, layer_idx=layer_idx)
+        self.ssd = CheemsStateSpaceDuality(config, layer_idx=layer_idx)
         self.post_sequence_residual = Residual(config.hidden_size)
 
         self.pre_state_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -878,6 +944,7 @@ class CheemsPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["CheemsSSDDecoderLayer", "CheemsAttnDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
+    _supports_flex_attn = True
     _supports_sdpa = True
     _supports_cache_class = True
     _supports_quantized_cache = True
@@ -1052,13 +1119,8 @@ class CheemsModel(CheemsPreTrainedModel):
         if position_ids is None:
             position_ids = cache_position.unsqueeze(0)
 
-
-        attn_mask = self._update_attn_mask(
-            attention_mask, hidden_states, cache_position
-        )
-        ssd_mask = self._update_ssd_mask(
-            attention_mask, cache_position
-        )
+        attn_mask = self._update_attn_mask(attention_mask, hidden_states, cache_position)
+        ssd_mask = self._update_ssd_mask(attention_mask, cache_position)
     
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
@@ -1066,9 +1128,8 @@ class CheemsModel(CheemsPreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-        next_decoder_cache = None
 
-        for decoder_layer in self.layers:
+        for decoder_layer in self.layers[: self.config.num_hidden_layers]:
             layer_mask = ssd_mask if isinstance(decoder_layer, CheemsSSDDecoderLayer) else attn_mask
 
             if output_hidden_states:
