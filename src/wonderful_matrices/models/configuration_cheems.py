@@ -32,14 +32,13 @@ class CheemsConfig(PretrainedConfig):
 
     Args:
         vocab_size (`int`, *optional*, defaults to 32768):
-            Vocabulary size of the Cheems model. Defines the number of different tokens that can be represented by the
-            `inputs_ids` passed when calling [`CheemsModel`]
+            Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the `inputs_ids` passed when calling [`CheemsModel`]
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
-        intermediate_size (`int`, *optional*, defaults to 4096):
-            Dimension of the CDMoE representations.
-        num_hidden_layers (`int`, *optional*, defaults to 16):
-            Number of hidden layers in the Transformer decoder.
+        intermediate_size (`int`, *optional*, defaults to 2048):
+            Dimension of the MLP representations.
+        num_hidden_layers (`int`, *optional*, defaults to 32):
+            Number of hidden layers in the decoder.
         hidden_bias (`bool`, *optional*, defaults to `False`):
             Whether to use bias in the hidden layers.
         hidden_dropout (`float`, *optional*, defaults to 0.0):
@@ -106,6 +105,13 @@ class CheemsConfig(PretrainedConfig):
             Size of the chunks that will comprise the sequence.
         num_attention_heads (`int`, *optional*, defaults to 8):
             Number of attention heads for each attention layer in the Transformer decoder.
+        num_key_value_heads (`int`, *optional*, defaults to `None`):
+            This is the number of key_value heads that should be used to implement Grouped Query Attention. 
+            If `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
+            `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. 
+            When converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed by meanpooling all the original heads within that group. 
+            For more details checkout [this paper](https://arxiv.org/pdf/2305.13245.pdf). 
+            If it is not specified, will default to `num_attention_heads`.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
         attn_layer_period (`int`, *optional*, defaults to 8):
@@ -113,14 +119,14 @@ class CheemsConfig(PretrainedConfig):
         attn_layer_offset (`int`, *optional*, defaults to 7):
             The first layer index that contains a attention layer.
         is_moe (`bool`, *optional*, defaults to `False`):
-            Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize.
-        num_cdmmoe_experts (`int`, *optional*, defaults to 4096):
-            Number of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_heads (`int`, *optional*, defaults to 4):
+            Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize
+        num_cdmoe_experts (`int`, *optional*, defaults to 16348):
+            Number of Private Experts for the Cross Domain Mixture of Experts. calculation formula: :math:`\text{num_cdmoe_experts} = (32 \times \text{num_cdmoe_heads})^2`
+        num_cdmoe_heads (`int`, *optional*, defaults to 4):
             Number of heads of Private Experts for the Cross Domain Mixture of Experts.
-        num_cdmmoe_experts_per_head (`int`, *optional*, defaults to 8):
+        num_cdmoe_experts_per_head (`int`, *optional*, defaults to 8):
             Number of Private Experts per head for the Cross Domain Mixture of Experts.
-        expert_retrieval_size (`int`, *optional*, defaults to 256):
+        expert_retrieval_size (`int`, *optional*, defaults to 64):
             Dimension of the Expert retrieval states for the Cross Domain Mixture of Experts.
     """
 
@@ -131,31 +137,37 @@ class CheemsConfig(PretrainedConfig):
         self,
         vocab_size=32768,
         hidden_size=1024,
-        intermediate_size=4096,
-        num_hidden_layers=16,
+        intermediate_size=2048,
+        num_hidden_layers=32,
         hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
         max_position_embeddings=2048,
         rope_theta=10000.0,
-        rope_scaling=None,
+        rope_scaling={
+            "rope_type": "dynamic",
+            "factor": 4.0,
+            "original_max_position_embeddings": 2048,
+        },
         initializer_range=0.02,
         rms_norm_eps=1e-06,
         use_cache=True,
-        pad_token_id=0,
-        bos_token_id=1,
-        eos_token_id=2,
-        tie_word_embeddings=False,
+        bos_token_id=0,
+        eos_token_id=1,
+        pad_token_id=2,
+        tie_word_embeddings=True,
         ssd_chunk_size=256,
         num_attention_heads=8,
+        num_key_value_heads=None,
         attention_dropout=0.0,
+        dynamic_mask_ratio=0.0,
         attn_layer_period=8,
         attn_layer_offset=7,
         is_moe=False,
-        num_cdmmoe_experts=4096,
-        num_cdmmoe_heads=4,
-        num_cdmmoe_experts_per_head=8,
-        expert_retrieval_size=256,
+        num_cdmoe_experts=16348,
+        num_cdmoe_heads=4,
+        num_cdmoe_experts_per_head=8,
+        expert_retrieval_size=64,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -177,13 +189,15 @@ class CheemsConfig(PretrainedConfig):
         self.tie_word_embeddings = tie_word_embeddings
         self.ssd_chunk_size = ssd_chunk_size
         self.num_attention_heads = num_attention_heads
+        self.num_key_value_heads = num_key_value_heads
         self.attention_dropout = attention_dropout
+        self.dynamic_mask_ratio = dynamic_mask_ratio
         self.attn_layer_period = attn_layer_period
         self.attn_layer_offset = attn_layer_offset
         self.is_moe = is_moe
-        self.num_cdmmoe_experts = num_cdmmoe_experts
-        self.num_cdmmoe_heads = num_cdmmoe_heads
-        self.num_cdmmoe_experts_per_head = num_cdmmoe_experts_per_head
+        self.num_cdmoe_experts = num_cdmoe_experts
+        self.num_cdmoe_heads = num_cdmoe_heads
+        self.num_cdmoe_experts_per_head = num_cdmoe_experts_per_head
         self.expert_retrieval_size = expert_retrieval_size
 
         # Validate the correctness of rotary position embeddings parameters
@@ -192,10 +206,14 @@ class CheemsConfig(PretrainedConfig):
             self.rope_scaling["rope_type"] = self.rope_scaling["type"]
         rope_config_validation(self)
 
+        # for backward compatibility
+        if num_key_value_heads is None:
+            self.num_key_value_heads = num_attention_heads
+
         super().__init__(
-            pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
             eos_token_id=eos_token_id,
+            pad_token_id=pad_token_id,
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
