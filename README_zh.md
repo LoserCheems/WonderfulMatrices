@@ -142,12 +142,12 @@ Doge 模型的序列变换模块.
 
 ```python
 import torch
-from wonderful_matrices.modules.dma import DMA
+from wonderful_matrices.modules.dmattn import DMAttn
 
 batch, seq_len, dim = 2, 16, 64
 x = torch.rand(batch, seq_len, dim)
 attention_mask = torch.ones(batch, seq_len)
-attn = DMA(
+attn = DMAttn(
     d_model=dim,
     n_heads=1,
     max_position_embeddings=seq_len,
