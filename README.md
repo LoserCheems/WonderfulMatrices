@@ -94,8 +94,8 @@ Usage:
 
 ```python
 import torch
-from wonderful_matrices.model.configuration_cheems import CheemsConfig
-from wonderful_matrices.model.modeling_cheems import CheemsForCausalLM
+from wonderful_matrices.models.configuration_cheems import CheemsConfig
+from wonderful_matrices.models.modeling_cheems import CheemsForCausalLM
 from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
@@ -118,8 +118,8 @@ Usage:
 
 ```python
 import torch
-from wonderful_matrices.model.configuration_doge import DogeConfig
-from wonderful_matrices.model.modeling_doge import DogeForCausalLM
+from wonderful_matrices.models.configuration_doge import DogeConfig
+from wonderful_matrices.models.modeling_doge import DogeForCausalLM
 from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
