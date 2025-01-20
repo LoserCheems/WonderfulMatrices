@@ -40,7 +40,7 @@ class DogeConfig(PretrainedConfig):
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
         intermediate_size (`int`, *optional*, defaults to 2048):
-            Dimension of the CDMoE representations.
+            Dimension of the MLP representations.
         num_hidden_layers (`int`, *optional*, defaults to 32):
             Number of hidden layers in the Transformer decoder.
         hidden_bias (`bool`, *optional*, defaults to `False`):
@@ -158,10 +158,10 @@ class DogeConfig(PretrainedConfig):
         attention_dropout=0.0,
         dynamic_mask_ratio=0.0,
         is_moe=False,
-        num_cdmoe_experts=2048,
+        num_cdmoe_experts=16348,
         num_cdmoe_heads=4,
         num_cdmoe_experts_per_head=8,
-        expert_retrieval_size=256,
+        expert_retrieval_size=64,
         **kwargs,
     ):
         self.vocab_size = vocab_size
