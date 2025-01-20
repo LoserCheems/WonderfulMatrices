@@ -17,7 +17,7 @@ dataset_splits:
 - train
 - test
 preprocessing_num_workers: 8
-max_seq_length: 8192
+max_seq_length: 2048
 packing: True
 
 # SFTTrainer arguments
