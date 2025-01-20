@@ -533,7 +533,7 @@ class DogeDecoderLayer(nn.Module):
         # sequence transformation
         residual = hidden_states
         hidden_states = self.pre_layernorm(hidden_states)
-        hidden_states, present_key_value = self.self_attn(
+        hidden_states = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -726,6 +726,7 @@ class DogeModel(DogePreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
+        **kwargs,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -797,6 +798,7 @@ class DogeModel(DogePreTrainedModel):
                     use_cache=use_cache,
                     cache_position=cache_position,
                     position_embeddings=position_embeddings,
+                    **kwargs,
                 )
 
             hidden_states = layer_outputs[0]
