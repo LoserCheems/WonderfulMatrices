@@ -25,7 +25,7 @@ from torch.nn import functional as F
 from transformers import Cache, StaticCache
 
 
-class DMA(nn.Module):
+class DMAttn(nn.Module):
     """Dynamic Masked Attention from 'Wonderful Matrices' paper."""
 
     def __init__(
@@ -209,6 +209,7 @@ class DMA(nn.Module):
         attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.attention_head_dim)
 
         # add mask to attention scores
+        attention_mask = self.update_causal_mask(attention_mask, hidden_states, cache_position, past_key_value)
         attn_mask = self.prepare_dynamic_mask(
             hidden_states=hidden_states,
             dynamic_mask=dynamic_mask,
