@@ -168,7 +168,7 @@ class DogeConfig(PretrainedConfig):
         num_key_value_heads=None,
         attention_dropout=0.0,
         dynamic_mask_ratio=0.0,
-        is_causal=True,
+        is_causal=False,
         is_moe=False,
         num_cdmoe_experts=16348,
         num_cdmoe_heads=4,

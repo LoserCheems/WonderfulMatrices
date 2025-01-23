@@ -282,6 +282,7 @@ class DogeDynamicMaskAttention(nn.Module):
         if self.is_causal is False:
             # calculate dynamic mask from value_states
             # NOTE: If these weights are not trained in causal mode, a mask of all ones will be returned, which will not affect the training results of causal mode
+            # TODO: The main reason for setting causal mode is that the Flex Attention kernel does not yet support score_mod functions with learnable parameters. However, we can continue training from the causal checkpoint later.
             dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(value_states.shape[0], value_states.shape[-2], -1))
             dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
         attn_mask = self.prepare_dynamic_mask(
