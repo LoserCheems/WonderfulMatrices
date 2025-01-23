@@ -214,7 +214,7 @@ class DogeDynamicMaskAttention(nn.Module):
         self.scaling = self.head_dim ** -0.5
         self.attention_dropout = config.attention_dropout
         self.dynamic_mask_ratio = config.dynamic_mask_ratio
-        self.is_causal = True
+        self.is_causal = config.is_causal
 
         self.ALL_ATTENTION_FUNCTIONS = {
             "eager": self.eager_attention_forward,
