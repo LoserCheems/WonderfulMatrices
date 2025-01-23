@@ -214,11 +214,12 @@ class DogeDynamicMaskAttention(nn.Module):
         self.scaling = self.head_dim ** -0.5
         self.attention_dropout = config.attention_dropout
         self.dynamic_mask_ratio = config.dynamic_mask_ratio
+        self.is_causal = True
 
         self.ALL_ATTENTION_FUNCTIONS = {
             "eager": self.eager_attention_forward,
-            "sdpa": self.sdpa_attention_forward,
             "flex_attention": self.flex_attention_forward,
+            "sdpa": self.sdpa_attention_forward,
         }
 
         # Q K V O projections
@@ -276,9 +277,13 @@ class DogeDynamicMaskAttention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        # calculate dynamic mask from value_states
-        dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(value_states.shape[0], value_states.shape[-2], -1))
-        dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
+        
+        dynamic_mask = None
+        if self.is_causal is False:
+            # calculate dynamic mask from value_states
+            # NOTE: If these weights are not trained in causal mode, a mask of all ones will be returned, which will not affect the training results of causal mode
+            dt_states = self.dt_proj(value_states.transpose(1, 2).reshape(value_states.shape[0], value_states.shape[-2], -1))
+            dynamic_mask = torch.exp(self.A * F.softplus(dt_states)).transpose(-1, -2)
         attn_mask = self.prepare_dynamic_mask(
             hidden_states=hidden_states,
             dynamic_mask=dynamic_mask,
@@ -320,15 +325,20 @@ class DogeDynamicMaskAttention(nn.Module):
             dynamic_mask_ratio (`float`, *optional*): Ratio from 0.0 to 1.0 used to control the proportion of the dynamic mask filled with the minimum value.
             attention_mask (`torch.Tensor`, *optional*): attention mask of shape `(batch_size, 1, query_sequence_length, key_sequence_length)`.
         """
-        min_type = torch.finfo(hidden_states.dtype).min
-        attn_mask = dynamic_mask[:, :, None, :]
-        if 0.0 < dynamic_mask_ratio < 1.0:
-            num_dynamic_mask = int(attn_mask.shape[-1] * dynamic_mask_ratio)
-            if num_dynamic_mask > 0:
-                rate_value = torch.kthvalue(attn_mask, num_dynamic_mask, dim=-1, keepdim=True).values
-                attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
-        if attention_mask is not None:
-            attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : hidden_states.shape[-2]] == min_type, min_type)
+        attn_mask = None
+        if dynamic_mask is not None:
+            min_type = torch.finfo(hidden_states.dtype).min
+            attn_mask = dynamic_mask[:, :, None, :]
+            if 0.0 < dynamic_mask_ratio < 1.0:
+                num_dynamic_mask = int(attn_mask.shape[-1] * dynamic_mask_ratio)
+                if num_dynamic_mask > 0:
+                    rate_value = torch.kthvalue(attn_mask, num_dynamic_mask, dim=-1, keepdim=True).values
+                    attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
+            if attention_mask is not None:
+                attn_mask = attn_mask + attention_mask[:, :, :, : attn_mask.shape[-1]]
+        else:
+            attn_mask = attention_mask
+
         return attn_mask
     
     def eager_attention_forward(
@@ -407,11 +417,18 @@ class DogeDynamicMaskAttention(nn.Module):
         if attention_mask is not None:
             causal_mask = causal_mask[:, :, :, : key.shape[-2]]
 
-        # TODO: flex_attention: Captured buffers that require grad are not yet supported.
+        # TODO: flex_attention: As of pytorch 2.5.1, captured buffers that require grad are not yet supported.
         # NOTE: So we only use flex_attention in inference mode.
-        def mask_mod(score, batch, head, q_idx, kv_idx):
+
+        def causal_mod(score, batch, head, q_idx, kv_idx):
+            score = score + causal_mask[batch][0][q_idx][kv_idx]
+            return score
+        
+        def dynamic_mod(score, batch, head, q_idx, kv_idx):
             score = score + causal_mask[batch][head][q_idx][kv_idx]
             return score
+        
+        mask_mod = causal_mod if self.is_causal else dynamic_mod
         
         attn_output = flex_attention(
             query,
