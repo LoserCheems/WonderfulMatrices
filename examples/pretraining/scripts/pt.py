@@ -43,6 +43,10 @@ def main(config_path):
     # Load dataset
     ################################
     dataset = datasets.load_from_disk(args['dataset_path'])
+    total_train_samples = args['per_device_train_batch_size'] * args['gradient_accumulation_steps'] * args['max_train_steps']
+    if len(dataset['train']) > total_train_samples:
+        dataset['train'] = dataset['train'].select(range(total_train_samples))
+
 
     ################################
     # Load tokenizer
