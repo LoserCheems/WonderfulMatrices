@@ -15,12 +15,12 @@ pip install lighteval
 If you are a Linux user, you can use the following command to evaluate the model:
 
 ```bash
-bash ./examples/evaluate/eval_downstream_tasks.sh
+bash ./examples/evaluation/eval_downstream_tasks.sh
 ```
 
 If you are a Windows user, you can use the following command to evaluate the model:
 
 ```bash
-. ./examples/evaluate/eval_downstream_tasks.ps1
+. ./examples/evaluation/eval_downstream_tasks.ps1
 ```
 > Note: You can modify `MODEL` and `OUTPUT_DIR` in the script to evaluate different models and save the results to different directories.
