@@ -65,7 +65,7 @@
       "special": true
     },
     "8": {
-      "content": "<think>",
+      "content": "<|begin_of_thought|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
@@ -73,7 +73,7 @@
       "special": true
     },
     "9": {
-      "content": "</think>",
+      "content": "<|end_of_thought|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
@@ -81,7 +81,7 @@
       "special": true
     },
     "10": {
-      "content": "<answer>",
+      "content": "<|begin_of_solution|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
@@ -89,7 +89,7 @@
       "special": true
     },
     "11": {
-      "content": "</answer>",
+      "content": "<|end_of_solution|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,

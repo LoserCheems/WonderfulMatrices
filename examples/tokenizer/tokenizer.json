@@ -77,7 +77,7 @@
     },
     {
       "id": 8,
-      "content": "<think>",
+      "content": "<|begin_of_thought|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -86,7 +86,7 @@
     },
     {
       "id": 9,
-      "content": "</think>",
+      "content": "<|end_of_thought|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -95,7 +95,7 @@
     },
     {
       "id": 10,
-      "content": "<answer>",
+      "content": "<|begin_of_solution|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -104,7 +104,7 @@
     },
     {
       "id": 11,
-      "content": "</answer>",
+      "content": "<|end_of_solution|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -2273,7 +2273,7 @@
     },
     {
       "id": 252,
-      "content": "<think>",
+      "content": "<|reserved_special_token_240|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -2282,7 +2282,7 @@
     },
     {
       "id": 253,
-      "content": "</think>",
+      "content": "<|reserved_special_token_241|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -2291,7 +2291,7 @@
     },
     {
       "id": 254,
-      "content": "<answer>",
+      "content": "<|reserved_special_token_242|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -2300,7 +2300,7 @@
     },
     {
       "id": 255,
-      "content": "</answer>",
+      "content": "<|reserved_special_token_243|>",
       "single_word": false,
       "lstrip": false,
       "rstrip": false,
@@ -2417,10 +2417,10 @@
       "<|eom_id|>": 5,
       "<|eot_id|>": 6,
       "<|python_tag|>": 7,
-      "<think>": 8,
-      "</think>": 9,
-      "<answer>": 10,
-      "</answer>": 11,
+      "<|begin_of_thought|>": 8,
+      "<|end_of_thought|>": 9,
+      "<|begin_of_solution|>": 10,
+      "<|end_of_solution|>": 11,
       "<|reserved_special_token_0|>": 12,
       "<|reserved_special_token_1|>": 13,
       "<|reserved_special_token_2|>": 14,
